@@ -2,6 +2,7 @@ package coins
 
 import (
 	"btcDemo/config"
+	"log"
 
 	"github.com/btcsuite/btcd/rpcclient"
 )
@@ -10,10 +11,10 @@ var keys []string = []string{"BtcConf"}
 var btcConn *rpcclient.ConnConfig
 
 func init() {
-	initConifg()
+	initConfig()
 	initClinet()
 }
-func initConifg() {
+func initConfig() {
 	conf, err := config.LoadConfig()
 	if err != nil {
 		panic("wallet init LoadConfig panic.")
@@ -29,4 +30,5 @@ func initConifg() {
 		HTTPPostMode: true,
 		DisableTLS:   true,
 	}
+	log.Println("coins=>conn=>initConfig sccuess.")
 }

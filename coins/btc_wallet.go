@@ -18,7 +18,19 @@ func initClinet() {
 	btcCli.Client = cli
 	return
 }
-func (btc *BtcService) GetAccounts() (accounts []*Account, err error) {
+
+/*
+*获取新的地址
+*account:账户名
+ */
+func (*BtcService) GetNewAddress(account string) (string, error) {
+	return "", nil
+}
+
+/*
+*获取所有account
+ */
+func (*BtcService) GetAccounts() (accounts []*Account, err error) {
 	accs, err := btcCli.Client.ListAccounts()
 	if err != nil {
 		return nil, err

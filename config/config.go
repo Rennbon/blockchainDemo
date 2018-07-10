@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"time"
 
 	"github.com/spf13/viper"
 )
 
 type Config struct {
 	BtcConf BtcConf
+	Mongo   Mongo
 }
 
 func init() {
@@ -55,4 +57,10 @@ type BtcConf struct {
 	Port   string //端口号
 	User   string //账户
 	Passwd string //密码
+}
+type Mongo struct {
+	Addr      string
+	Timeout   time.Duration
+	PoolLimit int
+	Database  string
 }
