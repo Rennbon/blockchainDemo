@@ -7,14 +7,13 @@ import (
 	"btcd/txscript"
 	"btcd/wire"
 	"btcutil"
-	"fmt"
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/rpcclient"
 )
 
 type BtcService struct {
-	Client *rpcclient.Client
+	client *rpcclient.Client
 }
 
 var (
@@ -28,7 +27,7 @@ func initClinet() {
 	if err != nil {
 		panic("btc rpcclient error.")
 	}
-	btcCli.Client = cli
+	btcCli.client = cli
 	return
 }
 
@@ -48,37 +47,23 @@ func (*BtcService) GetNewAddress(account string) (string, error) {
 	return key.Address, nil
 }
 
-func (*BtcService) AddAddressToChain(key cert.Key) error {
-	address, err := btcutil.DecodeAddress(key.PubKey, &chaincfg.RegressionNetParams)
-	addrValid, err := btcCli.Client.ValidateAddress(address)
+func (*BtcService) AddAddressToChain(pubKey, account string) error {
+	address, err := btcCli.CheckAddressExisted(pubKey)
 	if err != nil {
 		return err
 	}
-	fmt.Println(addrValid)
+	if err = btcCli.client.ImportAddress(address.EncodeAddress()); err != nil {
+		return err
+	}
 	return nil
-	/* if addrValid.IsWatchOnly == false {
-			//如果没有导入
-			if err := w.client.ImportAddressRescan(address.EncodeAddress(), address.EncodeAddress(), false); err != nil {
-				log.Error("import bitcoin address:", err)
-				return false
-			} else {
-				log.Info("import bitcoin address:", address.EncodeAddress())
-				return true
-			}
-		} else {
-			return true
-		}
-	} else {
-		return false
-	} */
 }
 func (*BtcService) CheckAddressExisted(pubKey string) (btcutil.Address, error) {
 	address, err := btcutil.DecodeAddress(pubKey, &chaincfg.RegressionNetParams)
-	addrValid, err := btcCli.Client.ValidateAddress(address)
+	addrValid, err := btcCli.client.ValidateAddress(address)
 	if err != nil {
 		return nil, err
 	}
-	if !addrValid.IsValid {
+	if addrValid.IsWatchOnly {
 		return address, errors.ERR_DATA_EXISTS
 	}
 	return address, nil
@@ -88,7 +73,7 @@ func (*BtcService) CheckAddressExisted(pubKey string) (btcutil.Address, error) {
 *获取所有account
  */
 func (*BtcService) GetAccounts() (accounts []*Account, err error) {
-	accs, err := btcCli.Client.ListAccounts()
+	accs, err := btcCli.client.ListAccounts()
 	if err != nil {
 		return nil, err
 	}

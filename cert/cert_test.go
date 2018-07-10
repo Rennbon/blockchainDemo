@@ -16,12 +16,12 @@ func TestGenerateSimpleKey(t *testing.T) {
 	fmt.Printf("privatekey:%s\n\rpublickey:%s", key.PrivKey, key.PubKey)
 }
 func TestNewAddress(t *testing.T) {
-	//msKTSXKQKXjFsHZit1LDiV4SWacY5kNDEz
-	//privatekey:5KE6Brfr1bVN16md5UVaY4kAtx8GkThzBVk2QeLS422D65Cypkf
-	//publickey:04ecf7652cbaa4e504d9ab37032a18386a771baf6f01e15047cc8d42a29a99f2eab6a32b69a6f2a779f4202826c287aedc3b2d27278b56a7cd1312eba4e72a8a35
-	addr, _ := certService.GetNewAddress("04ecf7652cbaa4e504d9ab37032a18386a771baf6f01e15047cc8d42a29a99f2eab6a32b69a6f2a779f4202826c287aedc3b2d27278b56a7cd1312eba4e72a8a35")
+	/* privatekey:92QiFfPkAfafdtTW5a8eCqLgCKK1tEZKMcAGA3PVi79cJpZeujc
+	   publickey:046c9bbd1c67db7a99bb45a98c592ec89bffe65174ddd130395d632cb428f7423c3cc4de7d623bc4da321451ddede0e39e8bec0105103268e609cb175ea2fedf91
+	*/
+	addr, _ := certService.GetNewAddress("046c9bbd1c67db7a99bb45a98c592ec89bffe65174ddd130395d632cb428f7423c3cc4de7d623bc4da321451ddede0e39e8bec0105103268e609cb175ea2fedf91")
 	fmt.Println(addr)
-	if "msKTSXKQKXjFsHZit1LDiV4SWacY5kNDEz" != addr {
+	if "n4Wxwu3xQe7vWQoqjzbjPmMMewBYjhcZzn" != addr {
 		t.Error("失败")
 	}
 }
