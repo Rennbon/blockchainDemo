@@ -6,7 +6,7 @@ import (
 
 type Account struct {
 	Id     bson.ObjectId `bson:"_id,omitempty"`
-	PriKey string        `bson:"prikey"`
+	PrvKey string        `bson:"prvkey"`
 	PubKey string        `bson:"pubkey"`
 	Name   string        `bson:"nam"`
 }

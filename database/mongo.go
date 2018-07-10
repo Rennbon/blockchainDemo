@@ -52,7 +52,7 @@ func loadBlockChainSession(c *config.Config) error {
 	return nil
 }
 
-func AccountProvider() (*mgo.Session, *mgo.Collection) {
+func accountProvider() (*mgo.Session, *mgo.Collection) {
 	session := blockChain.Clone()
 	col := session.DB(db_blockChain).C(col_account)
 	return session, col

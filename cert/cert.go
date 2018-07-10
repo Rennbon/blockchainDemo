@@ -2,7 +2,6 @@ package cert
 
 import (
 	"encoding/hex"
-	"fmt"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -14,6 +13,7 @@ type CertService struct {
 type Key struct {
 	PrivKey string
 	PubKey  string
+	Address string
 }
 
 func (*CertService) GenerateSimpleKey() (*Key, error) {
@@ -23,24 +23,24 @@ func (*CertService) GenerateSimpleKey() (*Key, error) {
 		return nil, err
 	}
 
-	privKeyWif, err := btcutil.NewWIF(privKey, &chaincfg.MainNetParams, false)
+	privKeyWif, err := btcutil.NewWIF(privKey, &chaincfg.RegressionNetParams, false)
 	if err != nil {
 		return nil, err
 	}
 	pubKeySerial := privKey.PubKey().SerializeUncompressed()
-	pubKey, err := btcutil.NewAddressPubKey(pubKeySerial, &chaincfg.MainNetParams)
+	pubKey, err := btcutil.NewAddressPubKey(pubKeySerial, &chaincfg.RegressionNetParams)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(pubKey.EncodeAddress())
-	return &Key{PrivKey: privKeyWif.String(), PubKey: pubKey.String()}, nil
+	addr := pubKey.EncodeAddress()
+	return &Key{PrivKey: privKeyWif.String(), PubKey: pubKey.String(), Address: addr}, nil
 }
 func (*CertService) GetNewAddress(pubKey string) (string, error) {
 	pubKeyByte, err := hex.DecodeString(pubKey)
 	if err != nil {
 		return "", err
 	}
-	addrspub, err := btcutil.NewAddressPubKey(pubKeyByte, &chaincfg.MainNetParams)
+	addrspub, err := btcutil.NewAddressPubKey(pubKeyByte, &chaincfg.RegressionNetParams)
 	if err != nil {
 		return "", err
 	}
