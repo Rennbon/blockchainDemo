@@ -1,16 +1,33 @@
-package main
+package cert
 
 import (
-	"fmt"
-
-	"github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcutil"
 )
 
-func main() {
-	seed, err := hdkeychain.GenerateSeed(hdkeychain.RecommendedSeedLen)
+type CertService struct {
+}
+type Key struct {
+	PrivKey string
+	PubKey  string
+}
+
+func (*CertService) GenerateSimplePrivateKey() (*Key, error) {
+
+	privKey, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
-		fmt.Println(err)
-		return
+		return nil, err
 	}
-	fmt.Println(seed)
+
+	privKeyWif, err := btcutil.NewWIF(privKey, &chaincfg.MainNetParams, false)
+	if err != nil {
+		return nil, err
+	}
+	pubKeySerial := privKey.PubKey().SerializeUncompressed()
+	pubKey, err := btcutil.NewAddressPubKey(pubKeySerial, &chaincfg.MainNetParams)
+	if err != nil {
+		return nil, err
+	}
+	return &Key{PrivKey: privKeyWif.String(), PubKey: pubKey.String()}, nil
 }
