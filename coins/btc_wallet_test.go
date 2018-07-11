@@ -37,5 +37,5 @@ func TestGetNewAddress(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Printf("address:%s\n\raccount:%s", address, account)
+	fmt.Printf("address:%s\n\raccount:%s\n\r", address, account)
 }

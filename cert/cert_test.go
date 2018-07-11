@@ -2,6 +2,7 @@ package cert_test
 
 import (
 	"btcDemo/cert"
+	"btcutil"
 	"fmt"
 	"testing"
 )
@@ -24,4 +25,9 @@ func TestNewAddress(t *testing.T) {
 	if "n4Wxwu3xQe7vWQoqjzbjPmMMewBYjhcZzn" != addr {
 		t.Error("失败")
 	}
+}
+
+func TestDecodeWIF(t *testing.T) {
+	wif, _ := btcutil.DecodeWIF("92QiFfPkAfafdtTW5a8eCqLgCKK1tEZKMcAGA3PVi79cJpZeujc")
+	fmt.Println(wif)
 }
