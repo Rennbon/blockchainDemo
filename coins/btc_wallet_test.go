@@ -39,3 +39,11 @@ func TestGetNewAddress(t *testing.T) {
 	}
 	fmt.Printf("address:%s\n\raccount:%s\n\r", address, account)
 }
+
+func TestGetBalanceInAddress(t *testing.T) {
+	balance, err := btc.GetBalanceInAddress("ms8d4chAKH9CjTY57HNymFSLZNUkZXFnVY")
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println(balance)
+}

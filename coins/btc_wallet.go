@@ -56,6 +56,7 @@ func (*BtcService) GetNewAddress(account string) (address, accountOut string, er
 	return key.Address, account, nil
 }
 
+/* 导入privatekey,这个导入能在coin.core上直接listaccounts查看到，因为有私钥了 */
 func (*BtcService) AddPrvkeyToWallet(prvkey, accoutIn string) (accountOut string, err error) {
 	wif, err := btcutil.DecodeWIF(prvkey)
 	if err != nil {
@@ -136,8 +137,16 @@ func (*BtcService) GetAccounts() (accounts []*Account, err error) {
 	}
 	return accounts, nil
 }
-func (*BtcService) GetBalanceInAddress(address string) (balance int64, err error) {
-	return
+func (*BtcService) GetBalanceInAddress(address string) (balance float64, err error) {
+	addr, err := btcutil.DecodeAddress(address, &chaincfg.RegressionNetParams)
+	if err != nil {
+		return 0, err
+	}
+	bal, err := btcSrv.client.GetReceivedByAddress(addr)
+	if err != nil {
+		return 0, err
+	}
+	return bal.ToBTC(), nil
 }
 func (*BtcService) SendBtcToAddress(addrFrom, addrTo string, amount, fee int64) error {
 
