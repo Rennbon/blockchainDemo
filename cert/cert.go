@@ -22,7 +22,7 @@ func (*CertService) GenerateSimpleKey() (*Key, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	privKey.Serialize()
 	privKeyWif, err := btcutil.NewWIF(privKey, &chaincfg.RegressionNetParams, false)
 	if err != nil {
 		return nil, err

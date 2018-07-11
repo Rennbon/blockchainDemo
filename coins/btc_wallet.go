@@ -7,6 +7,7 @@ import (
 	"btcd/txscript"
 	"btcd/wire"
 	"btcutil"
+	"log"
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/rpcclient"
@@ -17,9 +18,9 @@ type BtcService struct {
 }
 
 var (
-	certService cert.CertService
-	btcCli      BtcService
-	actService  database.AccountService
+	certSrv cert.CertService
+	btcSrv  BtcService
+	actSrv  database.AccountService
 )
 
 func initClinet() {
@@ -27,39 +28,84 @@ func initClinet() {
 	if err != nil {
 		panic("btc rpcclient error.")
 	}
-	btcCli.client = cli
-	return
+	btcSrv.client = cli
+	log.Println("coins=>btc_wallet=>initClinet sccuess.")
 }
 
 /*
 *获取新的地址
 *account:账户名
  */
-func (*BtcService) GetNewAddress(account string) (string, error) {
-	key, err := certService.GenerateSimpleKey()
+func (*BtcService) GetNewAddress(account string) (address, accountOut string, err error) {
+	key, err := certSrv.GenerateSimpleKey()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	err = actService.AddAccount(account, key.PrivKey, key.PubKey)
-	if err != nil {
-		return "", err
+	if err = actSrv.AddAccount(account, key.PrivKey, key.PubKey, key.Address); err != nil {
+		return "", "", err
 	}
-	return key.Address, nil
+	/* if account, err = btcSrv.AddAddressToChain(key.PubKey, account); err != nil {
+		return "", "", err
+	} */
+	if account, err = btcSrv.AddPubkeyToChain(key.PubKey, account); err != nil {
+		return "", "", err
+	}
+	return key.Address, account, nil
 }
 
-func (*BtcService) AddAddressToChain(pubKey, account string) error {
-	address, err := btcCli.CheckAddressExisted(pubKey)
+/* func (*BtcService) ImportPrivKey(prvKey, accountIn string) {
+     key:=btcec.PrivKeyFromBytes(btcec.S256(),)
+	privKeyWif, err := btcutil.NewWIF(prvKey, &chaincfg.RegressionNetParams, false)
+
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if err = btcCli.client.ImportAddress(address.EncodeAddress()); err != nil {
-		return err
+	btcSrv.client.ImportPrivKeyLabel()
+} */
+
+/* 将publickey对应的address添加到链中，
+pubKey 公钥
+account 地址自定义名称 */
+func (*BtcService) AddPubkeyToChain(pubKey, accountIn string) (accountOut string, err error) {
+	//验证地址是否已存在
+	address, err := btcSrv.CheckAddressExisted(pubKey)
+	if err != nil {
+		return "", err
 	}
-	return nil
+	if err = btcSrv.client.ImportPubKey(pubKey); err != nil {
+		return "", err
+	}
+	//修改名字 忽略错误
+	if err = btcSrv.client.SetAccount(address, accountIn); err != nil {
+		return "", nil
+	}
+	return accountIn, nil
 }
+
+/* 将publickey对应的address添加到链中，
+pubKey 公钥
+account 地址自定义名称 */
+func (*BtcService) AddAddressToChain(pubKey, accountIn string) (accountOut string, err error) {
+	//验证地址是否已存在
+	address, err := btcSrv.CheckAddressExisted(pubKey)
+	if err != nil {
+		return "", err
+	}
+	if err = btcSrv.client.ImportAddress(address.EncodeAddress()); err != nil {
+		return "", err
+	}
+	//修改名字 忽略错误
+	if btcSrv.client.SetAccount(address, accountIn) != nil {
+		return "", nil
+	}
+	return accountIn, nil
+}
+
+/* 验证publickey对应的地址是否已存在于链中
+pubkey 公钥 */
 func (*BtcService) CheckAddressExisted(pubKey string) (btcutil.Address, error) {
 	address, err := btcutil.DecodeAddress(pubKey, &chaincfg.RegressionNetParams)
-	addrValid, err := btcCli.client.ValidateAddress(address)
+	addrValid, err := btcSrv.client.ValidateAddress(address)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +119,7 @@ func (*BtcService) CheckAddressExisted(pubKey string) (btcutil.Address, error) {
 *获取所有account
  */
 func (*BtcService) GetAccounts() (accounts []*Account, err error) {
-	accs, err := btcCli.client.ListAccounts()
+	accs, err := btcSrv.client.ListAccounts()
 	if err != nil {
 		return nil, err
 	}

@@ -2,7 +2,9 @@ package coins
 
 import (
 	"fmt"
+	"strconv"
 	"testing"
+	"time"
 )
 
 var btc BtcService
@@ -28,4 +30,12 @@ func TestCheckAddressExisted(t *testing.T) {
 	if address.EncodeAddress() != "n4Wxwu3xQe7vWQoqjzbjPmMMewBYjhcZzn" {
 		t.Error("失败")
 	}
+}
+
+func TestGetNewAddress(t *testing.T) {
+	address, account, err := btc.GetNewAddress("Test" + strconv.FormatInt(time.Now().Unix(), 10))
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Printf("address:%s\n\raccount:%s", address, account)
 }

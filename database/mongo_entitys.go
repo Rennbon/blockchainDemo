@@ -5,8 +5,9 @@ import (
 )
 
 type Account struct {
-	Id     bson.ObjectId `bson:"_id,omitempty"`
-	PrvKey string        `bson:"prvkey"`
-	PubKey string        `bson:"pubkey"`
-	Name   string        `bson:"nam"`
+	Id      bson.ObjectId `bson:"_id,omitempty"`
+	PrvKey  string        `bson:"prvkey"`
+	PubKey  string        `bson:"pubkey"`
+	Name    string        `bson:"nam"`
+	Address string        `bson:"addr"`
 }
