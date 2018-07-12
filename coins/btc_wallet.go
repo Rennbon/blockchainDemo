@@ -4,8 +4,12 @@ import (
 	"btcDemo/cert"
 	"btcDemo/database"
 	"btcDemo/errors"
+	"bytes"
+	"encoding/hex"
+	"fmt"
 	"log"
 
+	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
@@ -165,10 +169,16 @@ func (*BtcService) GetUnspentByAddress(address string) (unspents []btcjson.ListU
 	return
 }
 
-func (*BtcService) SendBtcToAddress(addrFrom, addrTo string, transfer, fee float64) error {
+func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee float64) error {
 	//获取用户对应的key
-	accounts, err := actSrv.GetAccountByAddresses([]string{addrFrom, addrTo})
-
+	accounts, err := actSrv.GetAccountByAddresses([]string{addrFrom})
+	if err != nil {
+		return err
+	}
+	if len(accounts) == 0 {
+		return errors.ERR_DATA_INCONSISTENCIES
+	}
+	actf := accounts[0]
 	// 输出1, 给form
 	addrf, err := btcutil.DecodeAddress(addrFrom, &chaincfg.RegressionNetParams)
 	if err != nil {
@@ -185,6 +195,7 @@ func (*BtcService) SendBtcToAddress(addrFrom, addrTo string, transfer, fee float
 	)
 	//构造输入
 	inputs := []*wire.TxIn{}
+	var pkscripts [][]byte
 	for _, v := range unspents {
 		if v.Amount == 0 {
 			continue
@@ -196,6 +207,13 @@ func (*BtcService) SendBtcToAddress(addrFrom, addrTo string, transfer, fee float
 				outPoint := wire.NewOutPoint(hash, v.Vout)
 				txIn := wire.NewTxIn(outPoint, nil, nil)
 				inputs = append(inputs, txIn)
+
+				////设置txout
+				txinPkScript, err := hex.DecodeString(v.ScriptPubKey)
+				if err != nil {
+					return err
+				}
+				pkscripts = append(pkscripts, txinPkScript)
 			}
 		} else {
 			break
@@ -221,26 +239,76 @@ func (*BtcService) SendBtcToAddress(addrFrom, addrTo string, transfer, fee float
 	}
 	outputs = append(outputs, wire.NewTxOut(int64(transfer), pkScriptt))
 	//构造tx
-	tx := wire.NewMsgTx(wire.TxVersion)
-	tx.TxIn = inputs
-	tx.TxOut = outputs
+	tx := &wire.MsgTx{
+		TxIn:     inputs,
+		TxOut:    outputs,
+		Version:  wire.TxVersion,
+		LockTime: 0,
+	}
+
+	err = sign(tx, actf.PrvKey, pkscripts)
+	if err != nil {
+		return err
+	}
+	{ //only for out
+		buf := bytes.NewBuffer(make([]byte, 0, tx.SerializeSize()))
+		if err := tx.Serialize(buf); err != nil {
+		}
+		txHex := hex.EncodeToString(buf.Bytes())
+		fmt.Println("hex", txHex)
+	}
+
+	fmt.Println("Transaction successfully signed")
 	return nil
 }
 
-/*
-func sign() (tx *wire.MsgTx, privKeyStr string, prevPkScripts [][]byte) {
-	inputs := tx.TxIn
-	wif, err := btcutil.DecodeWIF(privKeyStr)
+func sign(tx *wire.MsgTx, privKey string, pkScripts [][]byte) error {
 
-	fmt.Println("wif err", err)
-	privKey := wif.PrivKey
-
-	for i := range inputs {
-		pkScript := prevPkScripts[i]
-		var script []byte
-		script, err = txscript.SignatureScript(tx, i, pkScript, txscript.SigHashAll,
-			privKey, false)
-		inputs[i].SignatureScript = script
+	wif, err := btcutil.DecodeWIF(privKey)
+	if err != nil {
+		return err
+	}
+	lookupKey := func(a btcutil.Address) (*btcec.PrivateKey, bool, error) {
+		return wif.PrivKey, true, nil
 	}
 
-} */
+	for i, _ := range tx.TxIn {
+		//script, err := txscript.SignatureScript(tx, i, pkScript, txscript.SigHashAll, wif.PrivKey, false)
+		script, err := txscript.SignTxOutput(&chaincfg.RegressionNetParams, tx, i, pkScripts[i], txscript.SigHashAll, txscript.KeyClosure(lookupKey), nil, nil)
+		if err != nil {
+			return err
+		}
+		tx.TxIn[i].SignatureScript = script
+		vm, err := txscript.NewEngine(pkScripts[i], tx, i,
+			txscript.StandardVerifyFlags, nil, nil, -1)
+		if err != nil {
+			return err
+		}
+		err = vm.Execute()
+		if err != nil {
+			return err
+		}
+		log.Println("Transaction successfully signed")
+	}
+	return nil
+}
+
+func mkGetKey(keys map[string]addressToKey) txscript.KeyDB {
+	if keys == nil {
+		return txscript.KeyClosure(func(addr btcutil.Address) (*btcec.PrivateKey, bool, error) {
+			return nil, false, errors.ERR_NOPE
+		})
+	}
+	return txscript.KeyClosure(func(addr btcutil.Address) (*btcec.PrivateKey, bool, error) {
+		a2k, ok := keys[addr.EncodeAddress()]
+		if !ok {
+			return nil, false, errors.ERR_NOPE
+		}
+		return a2k.key, a2k.compressed, nil
+	})
+}
+
+type addressToKey struct {
+	key        *btcec.PrivateKey
+	compressed bool
+}

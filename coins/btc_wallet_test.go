@@ -33,6 +33,7 @@ func TestCheckAddressExisted(t *testing.T) {
 	}
 }
 
+//获取新地址，同事数据库会存储key以便调试
 func TestGetNewAddress(t *testing.T) {
 	address, account, err := btc.GetNewAddress("Test" + strconv.FormatInt(time.Now().Unix(), 10))
 	if err != nil {
@@ -59,5 +60,12 @@ func TestGetUnspentByAddress(t *testing.T) {
 			t.Error(err)
 		}
 		fmt.Printf("%d\r\n%s", k, model)
+	}
+}
+
+func TestSendAddressToAddress(t *testing.T) {
+	err := btc.SendAddressToAddress("mkxMPobtVtgYVXfY2yw8jKfaWHxSbEyGoQ", "mhAfGecTPa9eZaaNkGJcV7fmUPFi3T2Ki8", 5, 0.0001)
+	if err != nil {
+		t.Error(err)
 	}
 }
