@@ -1,6 +1,7 @@
 package coins
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"testing"
@@ -46,4 +47,17 @@ func TestGetBalanceInAddress(t *testing.T) {
 		t.Error(err)
 	}
 	fmt.Println(balance)
+}
+func TestGetUnspentByAddress(t *testing.T) {
+	unspents, err := btc.GetUnspentByAddress("n3Si67pN4Mfio6UYgtc53Y8eoNApQHTgfy")
+	if err != nil {
+		t.Error(err)
+	}
+	for k, v := range unspents {
+		model, err := json.MarshalIndent(v, "", " ")
+		if err != nil {
+			t.Error(err)
+		}
+		fmt.Printf("%d\r\n%s", k, model)
+	}
 }

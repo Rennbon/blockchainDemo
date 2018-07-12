@@ -6,7 +6,9 @@ import (
 	"btcDemo/errors"
 	"log"
 
+	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/rpcclient"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
@@ -47,12 +49,12 @@ func (*BtcService) GetNewAddress(account string) (address, accountOut string, er
 	/* if account, err = btcSrv.AddAddressToWallet(key.PubKey, account); err != nil {
 		return "", "", err
 	} */
-	/* if account, err = btcSrv.AddPubkeyToWallet(key.PubKey, account); err != nil {
-		return "", "", err
-	} */
-	if account, err = btcSrv.AddPrvkeyToWallet(key.PrivKey, account); err != nil {
+	if account, err = btcSrv.AddPubkeyToWallet(key.PubKey, account); err != nil {
 		return "", "", err
 	}
+	/* 	if account, err = btcSrv.AddPrvkeyToWallet(key.PrivKey, account); err != nil {
+		return "", "", err
+	} */
 	return key.Address, account, nil
 }
 
@@ -148,32 +150,97 @@ func (*BtcService) GetBalanceInAddress(address string) (balance float64, err err
 	}
 	return bal.ToBTC(), nil
 }
-func (*BtcService) SendBtcToAddress(addrFrom, addrTo string, amount, fee int64) error {
 
-	// 1. 构造输出
-	outputs := []*wire.TxOut{}
+//根据address获取未花费的tx
+func (*BtcService) GetUnspentByAddress(address string) (unspents []btcjson.ListUnspentResult, err error) {
+	btcAdd, err := btcutil.DecodeAddress(address, &chaincfg.RegressionNetParams)
+	if err != nil {
+		return nil, err
+	}
+	adds := [1]btcutil.Address{btcAdd}
+	unspents, err = btcSrv.client.ListUnspentMinMaxAddresses(1, 999999, adds[:])
+	if err != nil {
+		return nil, err
+	}
+	return
+}
+
+func (*BtcService) SendBtcToAddress(addrFrom, addrTo string, transfer, fee float64) error {
+	//获取用户对应的key
+	accounts, err := actSrv.GetAccountByAddresses([]string{addrFrom, addrTo})
 
 	// 输出1, 给form
 	addrf, err := btcutil.DecodeAddress(addrFrom, &chaincfg.RegressionNetParams)
 	if err != nil {
 		return err
 	}
+	unspents, err := btcSrv.GetUnspentByAddress(addrFrom)
+	if err != nil {
+		return err
+	}
+	var (
+		outsu     float64                     //unspent单子相加
+		feesum    float64 = fee               //交易费总和
+		totalTran float64 = transfer + feesum //总共花费
+	)
+	//构造输入
+	inputs := []*wire.TxIn{}
+	for _, v := range unspents {
+		if v.Amount == 0 {
+			continue
+		}
+		if outsu < totalTran {
+			outsu += v.Amount
+			{ //输入
+				hash, _ := chainhash.NewHashFromStr(v.TxID)
+				outPoint := wire.NewOutPoint(hash, v.Vout)
+				txIn := wire.NewTxIn(outPoint, nil, nil)
+				inputs = append(inputs, txIn)
+			}
+		} else {
+			break
+		}
+	}
+	//构造输出
+	outputs := []*wire.TxOut{}
+	//输出1，给from
 	pkScriptf, err := txscript.PayToAddrScript(addrf)
 	if err != nil {
 		return err
 	}
-	outputs = append(outputs, wire.NewTxOut(amount, pkScriptf))
-	//输出2，给To
+	outputs = append(outputs, wire.NewTxOut(int64(outsu-totalTran), pkScriptf))
+
+	//输出2，给to
 	addrt, err := btcutil.DecodeAddress(addrTo, &chaincfg.RegressionNetParams)
 	if err != nil {
 		return err
 	}
-
 	pkScriptt, err := txscript.PayToAddrScript(addrt)
 	if err != nil {
 		return err
 	}
-	outputs = append(outputs, wire.NewTxOut(amount, pkScriptt))
-
+	outputs = append(outputs, wire.NewTxOut(int64(transfer), pkScriptt))
+	//构造tx
+	tx := wire.NewMsgTx(wire.TxVersion)
+	tx.TxIn = inputs
+	tx.TxOut = outputs
 	return nil
 }
+
+/*
+func sign() (tx *wire.MsgTx, privKeyStr string, prevPkScripts [][]byte) {
+	inputs := tx.TxIn
+	wif, err := btcutil.DecodeWIF(privKeyStr)
+
+	fmt.Println("wif err", err)
+	privKey := wif.PrivKey
+
+	for i := range inputs {
+		pkScript := prevPkScripts[i]
+		var script []byte
+		script, err = txscript.SignatureScript(tx, i, pkScript, txscript.SigHashAll,
+			privKey, false)
+		inputs[i].SignatureScript = script
+	}
+
+} */
