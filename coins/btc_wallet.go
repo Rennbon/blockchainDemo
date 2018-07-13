@@ -194,10 +194,8 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 		totalTran float64 = transfer + feesum //总共花费
 		pkscripts [][]byte
 	)
-	//构造输入
-	inputs := []*wire.TxIn{}
-	//构造输出
-	outputs := []*wire.TxOut{}
+	//构造tx
+	tx := wire.NewMsgTx(wire.TxVersion)
 	//输出1，给from
 	pkScriptf, err := txscript.PayToAddrScript(addrf)
 	if err != nil {
@@ -213,7 +211,9 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 				hash, _ := chainhash.NewHashFromStr(v.TxID)
 				outPoint := wire.NewOutPoint(hash, v.Vout)
 				txIn := wire.NewTxIn(outPoint, nil, nil)
-				inputs = append(inputs, txIn)
+
+				tx.AddTxIn(txIn)
+				//构造交易 txin
 
 				//设置txout
 				txinPkScript, err := hex.DecodeString(v.ScriptPubKey)
@@ -226,9 +226,7 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 			break
 		}
 	}
-
-	outputs = append(outputs, wire.NewTxOut(int64(outsu-totalTran), pkScriptf))
-
+	tx.AddTxOut(wire.NewTxOut(int64(outsu-totalTran), pkScriptf))
 	//输出2，给to
 	addrt, err := btcutil.DecodeAddress(addrTo, &chaincfg.RegressionNetParams)
 	if err != nil {
@@ -238,14 +236,7 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 	if err != nil {
 		return err
 	}
-	outputs = append(outputs, wire.NewTxOut(int64(transfer), pkScriptt))
-	//构造tx
-	tx := &wire.MsgTx{
-		TxIn:     inputs,
-		TxOut:    outputs,
-		Version:  wire.TxVersion,
-		LockTime: 0,
-	}
+	tx.AddTxOut(wire.NewTxOut(int64(outsu-totalTran), pkScriptt))
 
 	err = sign(tx, actf.PrvKey, pkscripts)
 	if err != nil {
@@ -272,11 +263,8 @@ func sign(tx *wire.MsgTx, privKey string, pkScripts [][]byte) error {
 	/* lookupKey := func(a btcutil.Address) (*btcec.PrivateKey, bool, error) {
 		return wif.PrivKey, true, nil
 	} */
-	fmt.Println(wif.PrivKey)
 	for i, _ := range tx.TxIn {
-		fmt.Println(tx.TxIn[i].PreviousOutPoint)
 		script, err := txscript.SignatureScript(tx, i, pkScripts[i], txscript.SigHashAll, wif.PrivKey, false)
-
 		//script, err := txscript.SignTxOutput(&chaincfg.RegressionNetParams, tx, i, pkScripts[i], txscript.SigHashAll, txscript.KeyClosure(lookupKey), nil, nil)
 
 		if err != nil {
