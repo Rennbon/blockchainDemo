@@ -11,3 +11,10 @@ type Account struct {
 	Name    string        `bson:"nam"`
 	Address string        `bson:"addr"`
 }
+
+type Tx struct {
+	Id      bson.ObjectId `bson:"_id,omitempty"`
+	TxId    string        `bson:"txid"`
+	Address string        `bson:"addr"`
+	Name    string        `bson:"nam"`
+}

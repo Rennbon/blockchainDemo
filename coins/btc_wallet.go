@@ -26,7 +26,7 @@ type BtcService struct {
 var (
 	certSrv cert.CertService
 	btcSrv  BtcService
-	actSrv  database.AccountService
+	dhSrv   database.DHService
 )
 
 func initClinet() {
@@ -47,7 +47,7 @@ func (*BtcService) GetNewAddress(account string) (address, accountOut string, er
 	if err != nil {
 		return "", "", err
 	}
-	if err = actSrv.AddAccount(account, key.PrivKey, key.PubKey, key.Address); err != nil {
+	if err = dhSrv.AddAccount(account, key.PrivKey, key.PubKey, key.Address); err != nil {
 		return "", "", err
 	}
 	/* if account, err = btcSrv.AddAddressToWallet(key.PubKey, account); err != nil {
@@ -170,52 +170,39 @@ func (*BtcService) GetUnspentByAddress(address string) (unspents []btcjson.ListU
 }
 
 func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee float64) error {
-	//获取用户对应的key
-	accounts, err := actSrv.GetAccountByAddresses([]string{addrFrom})
+	//数据库获取prv pub key等信息，便于调试--------START------
+	actf, err := dhSrv.GetAccountByAddress(addrFrom)
 	if err != nil {
 		return err
 	}
-	if len(accounts) == 0 {
-		return errors.ERR_DATA_INCONSISTENCIES
-	}
-	actf := accounts[0]
-	// 输出1, 给form
-	addrf, err := btcutil.DecodeAddress(addrFrom, &chaincfg.RegressionNetParams)
-	if err != nil {
-		return err
-	}
+	//----------------------------------------END-----------
+
 	unspents, err := btcSrv.GetUnspentByAddress(addrFrom)
 	if err != nil {
 		return err
 	}
-	var (
-		outsu     float64                     //unspent单子相加
-		feesum    float64 = fee               //交易费总和
-		totalTran float64 = transfer + feesum //总共花费
-		pkscripts [][]byte
-	)
-	//构造tx
-	tx := wire.NewMsgTx(wire.TxVersion)
-	//输出1，给from
-	pkScriptf, err := txscript.PayToAddrScript(addrf)
-	if err != nil {
-		return err
-	}
+	//各种参数声明 可以构建为内部小对象
+	outsu := float64(0)                 //unspent单子相加
+	feesum := fee                       //交易费总和
+	totalTran := transfer + feesum      //总共花费
+	var pkscripts [][]byte              //txin签名用script
+	tx := wire.NewMsgTx(wire.TxVersion) //构造tx
+
 	for _, v := range unspents {
 		if v.Amount == 0 {
 			continue
 		}
 		if outsu < totalTran {
 			outsu += v.Amount
-			{ //输入
+			{
+				//txin输入-------start-----------------
 				hash, _ := chainhash.NewHashFromStr(v.TxID)
 				outPoint := wire.NewOutPoint(hash, v.Vout)
 				txIn := wire.NewTxIn(outPoint, nil, nil)
 
 				tx.AddTxIn(txIn)
-				//构造交易 txin
-				fmt.Println(v.ScriptPubKey)
-				//设置txout
+
+				//设置签名用script
 				txinPkScript, err := hex.DecodeString(v.ScriptPubKey)
 				if err != nil {
 					return err
@@ -226,8 +213,22 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 			break
 		}
 	}
-	tx.AddTxOut(wire.NewTxOut(int64(outsu-totalTran), pkScriptf))
-	//输出2，给to
+	//家里穷钱不够
+	if outsu < totalTran {
+		return errors.ERR_NOT_ENOUGH_COIN
+	}
+	// 输出1, 给form----------------找零-------------------
+	addrf, err := btcutil.DecodeAddress(addrFrom, &chaincfg.RegressionNetParams)
+	if err != nil {
+		return err
+	}
+	pkScriptf, err := txscript.PayToAddrScript(addrf)
+	if err != nil {
+		return err
+	}
+	baf := int64((outsu - totalTran) * 1e8)
+	tx.AddTxOut(wire.NewTxOut(baf, pkScriptf))
+	//输出2，给to------------------付钱-----------------
 	addrt, err := btcutil.DecodeAddress(addrTo, &chaincfg.RegressionNetParams)
 	if err != nil {
 		return err
@@ -236,12 +237,19 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 	if err != nil {
 		return err
 	}
-	tx.AddTxOut(wire.NewTxOut(int64(outsu-totalTran), pkScriptt))
-
-	err = sign(tx, actf.PrvKey, pkscripts)
+	bat := int64(transfer * 1e8)
+	tx.AddTxOut(wire.NewTxOut(bat, pkScriptt))
+	//-------------------输出填充end------------------------------
+	err = sign(tx, actf.PrvKey, pkscripts) //签名
 	if err != nil {
 		return err
 	}
+	//广播
+	txHash, err := btcSrv.client.SendRawTransaction(tx, false)
+	if err != nil {
+		return err
+	}
+	fmt.Println(txHash.String())
 	{ //only for out
 		buf := bytes.NewBuffer(make([]byte, 0, tx.SerializeSize()))
 		if err := tx.Serialize(buf); err != nil {
@@ -249,23 +257,40 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 		txHex := hex.EncodeToString(buf.Bytes())
 		fmt.Println("hex", txHex)
 	}
-
 	fmt.Println("Transaction successfully signed")
 	return nil
 }
 
-func sign(tx *wire.MsgTx, privKey string, pkScripts [][]byte) error {
+func (*BtcService) GetTxByAddress(addr string) (interface{}, error) {
 
+	address, err := btcutil.DecodeAddress(addr, &chaincfg.RegressionNetParams)
+	if err != nil {
+		return nil, err
+	}
+	act, err := dhSrv.GetAccountByAddress(addr)
+	if err != nil {
+		return nil, err
+	}
+	txs, err := btcSrv.client.ListAddressTransactions([]btcutil.Address{address}, act.Name)
+	if err != nil {
+		return nil, err
+	}
+	return txs, nil
+}
+
+//签名
+//privkey的compress方式需要与TxIn的
+func sign(tx *wire.MsgTx, privKey string, pkScripts [][]byte) error {
 	wif, err := btcutil.DecodeWIF(privKey)
 	if err != nil {
 		return err
 	}
-	lookupKey := func(a btcutil.Address) (*btcec.PrivateKey, bool, error) {
+	/* lookupKey := func(a btcutil.Address) (*btcec.PrivateKey, bool, error) {
 		return wif.PrivKey, false, nil
-	}
+	} */
 	for i, _ := range tx.TxIn {
-		//script, err := txscript.SignatureScript(tx, i, pkScripts[i], txscript.SigHashAll, wif.PrivKey, false)
-		script, err := txscript.SignTxOutput(&chaincfg.RegressionNetParams, tx, i, pkScripts[i], txscript.SigHashAll, txscript.KeyClosure(lookupKey), nil, nil)
+		script, err := txscript.SignatureScript(tx, i, pkScripts[i], txscript.SigHashAll, wif.PrivKey, false)
+		//script, err := txscript.SignTxOutput(&chaincfg.RegressionNetParams, tx, i, pkScripts[i], txscript.SigHashAll, txscript.KeyClosure(lookupKey), nil, nil)
 		if err != nil {
 			return err
 		}
@@ -281,119 +306,6 @@ func sign(tx *wire.MsgTx, privKey string, pkScripts [][]byte) error {
 		}
 		log.Println("Transaction successfully signed")
 	}
-	return nil
-}
-
-func (*BtcService) btcTransferHandler(addrFrom, addrTo string, transfer, fee float64) error {
-	accounts, err := actSrv.GetAccountByAddresses([]string{addrFrom})
-	if err != nil {
-		return err
-	}
-	if len(accounts) == 0 {
-		return errors.ERR_DATA_INCONSISTENCIES
-	}
-	actf := accounts[0]
-	//更换地址格式
-	pubKeyToAddr, err := btcutil.DecodeAddress(addrTo, &chaincfg.RegressionNetParams)
-	if err != nil {
-		return err
-	}
-
-	//每千字节的收费(0.0001BTC/kB),计算公式: (148 * 输入数额) + (34 * 输出数额) + 10,没1000字节的费用默认是0.0001BTC
-	//handlefee=((148*len(vin) + 34*len(vout) +10)/1000 + 1) * 0.0001BTC
-	getAmount := float64(0)            //能获取的数目
-	handlefee := float64(fee)          //手续费
-	realOutAmount := float64(transfer) //要花费的数目
-	allSpend := realOutAmount + handlefee
-	leftAmount := float64(-1) //剩余找零
-	type prvIndex struct {
-		pkScript []byte
-		//index    uint32
-	}
-	//[txid]prvIndex, 用于记录txid对应的地址索引
-	var txidMap = make(map[wire.OutPoint]*prvIndex)
-	var rawtx = wire.NewMsgTx(2)
-	////设置txout
-	pkScript, err := txscript.PayToAddrScript(pubKeyToAddr)
-	if err != nil {
-		return err
-	}
-	txOut := wire.NewTxOut(int64(realOutAmount), pkScript)
-	rawtx.AddTxOut(txOut)
-
-	//地址格式转化
-	//listUspent, err := btcSrv.client.ListUnspentMinMaxAddresses(1, 99999999, []btcutil.Address{w.accHandle.Account})
-	listUspent, err := btcSrv.GetUnspentByAddress(addrFrom)
-	if err != nil {
-		return err
-	}
-	for _, _utxo := range listUspent {
-		if int64(_utxo.Amount*1e8) <= 0 {
-			continue
-		}
-		haveAmount := _utxo.Amount
-		getAmount = getAmount + haveAmount
-
-		//构造交易 txin
-		prehash, _ := chainhash.NewHashFromStr(_utxo.TxID)
-		prevOut := wire.NewOutPoint(prehash, _utxo.Vout)
-		txIn := wire.NewTxIn(prevOut, nil, nil)
-		rawtx.AddTxIn(txIn)
-
-		////设置txout
-		txinPkScript, err := hex.DecodeString(_utxo.ScriptPubKey)
-		if err != nil {
-			return err
-		}
-		txidMap[*prevOut] = &prvIndex{pkScript: txinPkScript}
-
-		if getAmount > allSpend {
-			leftAmount = getAmount - allSpend
-			//设置找零
-			var reedAddr btcutil.Address
-			reedAddr, err = btcutil.DecodeAddress(_utxo.Address, &chaincfg.RegressionNetParams)
-			pkScript, err := txscript.PayToAddrScript(reedAddr)
-			if err != nil {
-				return err
-			}
-			txOut := wire.NewTxOut(int64(leftAmount), pkScript)
-			rawtx.AddTxOut(txOut)
-			break
-		}
-	}
-
-	if leftAmount < 0 {
-
-		return err
-	}
-	wif, err := btcutil.DecodeWIF(actf.PrvKey)
-	if err != nil {
-		return err
-	}
-	lookupKey := func(a btcutil.Address) (*btcec.PrivateKey, bool, error) {
-		return wif.PrivKey, true, nil
-	}
-	for i, txid := range rawtx.TxIn {
-		sigScript, err := txscript.SignTxOutput(&chaincfg.RegressionNetParams, rawtx, i, txidMap[txid.PreviousOutPoint].pkScript,
-			txscript.SigHashAll, txscript.KeyClosure(lookupKey), nil, nil)
-		if err != nil {
-			fmt.Println(err)
-		}
-		rawtx.TxIn[i].SignatureScript = sigScript
-
-		//check
-		vm, err := txscript.NewEngine(txidMap[txid.PreviousOutPoint].pkScript, rawtx, i,
-			txscript.StandardVerifyFlags, nil, nil, -1)
-		if err != nil {
-			return err
-		}
-		if err := vm.Execute(); err != nil {
-			return err
-		} else {
-			log.Println("Transaction successfully signed")
-		}
-	}
-
 	return nil
 }
 

@@ -11,6 +11,7 @@ import (
 
 const (
 	col_account string = "account"
+	col_tx      string = "tx"
 )
 
 var (
@@ -55,5 +56,10 @@ func loadBlockChainSession(c *config.Config) error {
 func accountProvider() (*mgo.Session, *mgo.Collection) {
 	session := blockChain.Clone()
 	col := session.DB(db_blockChain).C(col_account)
+	return session, col
+}
+func txProvider() (*mgo.Session, *mgo.Collection) {
+	session := blockChain.Clone()
+	col := session.DB(db_blockChain).C(col_tx)
 	return session, col
 }

@@ -69,9 +69,11 @@ func TestSendAddressToAddress(t *testing.T) {
 		t.Error(err)
 	}
 }
-func TestBtcTransferHandler(t *testing.T) {
-	err := btc.btcTransferHandler("mkxMPobtVtgYVXfY2yw8jKfaWHxSbEyGoQ", "mhAfGecTPa9eZaaNkGJcV7fmUPFi3T2Ki8", 40, 0.0001)
+
+func TestGetTxByAddress(t *testing.T) {
+	txs, err := btc.GetTxByAddress("mkxMPobtVtgYVXfY2yw8jKfaWHxSbEyGoQ")
 	if err != nil {
 		t.Error(err)
 	}
+	fmt.Println(txs)
 }
