@@ -4,7 +4,6 @@ import (
 	"btcDemo/cert"
 	"btcDemo/database"
 	"btcDemo/errors"
-	"bytes"
 	"encoding/hex"
 	"fmt"
 	"log"
@@ -22,6 +21,15 @@ import (
 type BtcService struct {
 	client *rpcclient.Client
 }
+type AcountRunMode int
+
+const (
+	_AcountRunMode = iota
+	NoneMode       //什么都不导入
+	PrvMode        //导入私钥
+	PubMode        //导入公钥
+	AddrMode       //导入地址
+)
 
 var (
 	certSrv cert.CertService
@@ -42,7 +50,7 @@ func initClinet() {
 *获取新的地址
 *account:账户名
  */
-func (*BtcService) GetNewAddress(account string) (address, accountOut string, err error) {
+func (*BtcService) GetNewAddress(account string, mode AcountRunMode) (address, accountOut string, err error) {
 	key, err := certSrv.GenerateSimpleKey()
 	if err != nil {
 		return "", "", err
@@ -50,15 +58,24 @@ func (*BtcService) GetNewAddress(account string) (address, accountOut string, er
 	if err = dhSrv.AddAccount(account, key.PrivKey, key.PubKey, key.Address); err != nil {
 		return "", "", err
 	}
-	/* if account, err = btcSrv.AddAddressToWallet(key.PubKey, account); err != nil {
-		return "", "", err
-	} */
-	if account, err = btcSrv.AddPubkeyToWallet(key.PubKey, account); err != nil {
-		return "", "", err
+	switch mode {
+	case NoneMode:
+		break
+	case PrvMode:
+		account, err = btcSrv.AddPrvkeyToWallet(key.PrivKey, account)
+		break
+	case PubMode:
+		account, err = btcSrv.AddPubkeyToWallet(key.PubKey, account)
+		break
+	case AddrMode:
+		account, err = btcSrv.AddAddressToWallet(key.PubKey, account)
+		break
+	default:
+		break
 	}
-	/* 	if account, err = btcSrv.AddPrvkeyToWallet(key.PrivKey, account); err != nil {
-		return "", "", err
-	} */
+	if err != nil {
+		return "", "", nil
+	}
 	return key.Address, account, nil
 }
 
@@ -249,29 +266,26 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 	if err != nil {
 		return err
 	}
-	fmt.Println(txHash.String())
-	{ //only for out
-		buf := bytes.NewBuffer(make([]byte, 0, tx.SerializeSize()))
-		if err := tx.Serialize(buf); err != nil {
-		}
-		txHex := hex.EncodeToString(buf.Bytes())
-		fmt.Println("hex", txHex)
-	}
+	dhSrv.AddTx("", txHash.String(), addrFrom)
 	fmt.Println("Transaction successfully signed")
+	fmt.Println(txHash.String())
 	return nil
 }
 
-func (*BtcService) GetTxByAddress(addr string) (interface{}, error) {
+//这个方法ListAddressTransactions method not found;btcd NOTE: This is a btcwallet extension.
+func (*BtcService) GetTxByAddress(addrs []string, name string) (interface{}, error) {
+	ct := len(addrs)
+	addresses := make([]btcutil.Address, 0, ct)
+	for _, v := range addrs {
+		address, err := btcutil.DecodeAddress(v, &chaincfg.RegressionNetParams)
+		if err != nil {
+			log.Println("一个废物")
+		} else {
+			addresses = append(addresses, address)
+		}
+	}
 
-	address, err := btcutil.DecodeAddress(addr, &chaincfg.RegressionNetParams)
-	if err != nil {
-		return nil, err
-	}
-	act, err := dhSrv.GetAccountByAddress(addr)
-	if err != nil {
-		return nil, err
-	}
-	txs, err := btcSrv.client.ListAddressTransactions([]btcutil.Address{address}, act.Name)
+	txs, err := btcSrv.client.ListAddressTransactions(addresses, name)
 	if err != nil {
 		return nil, err
 	}
