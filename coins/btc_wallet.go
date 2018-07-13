@@ -214,7 +214,7 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 
 				tx.AddTxIn(txIn)
 				//构造交易 txin
-
+				fmt.Println(v.ScriptPubKey)
 				//设置txout
 				txinPkScript, err := hex.DecodeString(v.ScriptPubKey)
 				if err != nil {
@@ -260,13 +260,12 @@ func sign(tx *wire.MsgTx, privKey string, pkScripts [][]byte) error {
 	if err != nil {
 		return err
 	}
-	/* lookupKey := func(a btcutil.Address) (*btcec.PrivateKey, bool, error) {
-		return wif.PrivKey, true, nil
-	} */
+	lookupKey := func(a btcutil.Address) (*btcec.PrivateKey, bool, error) {
+		return wif.PrivKey, false, nil
+	}
 	for i, _ := range tx.TxIn {
-		script, err := txscript.SignatureScript(tx, i, pkScripts[i], txscript.SigHashAll, wif.PrivKey, false)
-		//script, err := txscript.SignTxOutput(&chaincfg.RegressionNetParams, tx, i, pkScripts[i], txscript.SigHashAll, txscript.KeyClosure(lookupKey), nil, nil)
-
+		//script, err := txscript.SignatureScript(tx, i, pkScripts[i], txscript.SigHashAll, wif.PrivKey, false)
+		script, err := txscript.SignTxOutput(&chaincfg.RegressionNetParams, tx, i, pkScripts[i], txscript.SigHashAll, txscript.KeyClosure(lookupKey), nil, nil)
 		if err != nil {
 			return err
 		}
