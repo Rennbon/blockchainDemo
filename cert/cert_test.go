@@ -2,9 +2,10 @@ package cert_test
 
 import (
 	"blockchainDemo/cert"
-	"btcutil"
 	"fmt"
 	"testing"
+
+	"github.com/btcsuite/btcutil"
 )
 
 var certService cert.CertService
