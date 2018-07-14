@@ -1,7 +1,7 @@
 package coins
 
 import (
-	"btcDemo/config"
+	"blockchainDemo/config"
 	"log"
 
 	"github.com/btcsuite/btcd/rpcclient"

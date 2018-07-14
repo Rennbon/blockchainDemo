@@ -1,7 +1,7 @@
 package database
 
 import (
-	"btcDemo/config"
+	"blockchainDemo/config"
 	"log"
 	"strings"
 	"time"

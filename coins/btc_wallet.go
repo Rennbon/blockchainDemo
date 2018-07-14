@@ -1,9 +1,9 @@
 package coins
 
 import (
-	"btcDemo/cert"
-	"btcDemo/database"
-	"btcDemo/errors"
+	"blockchainDemo/cert"
+	"blockchainDemo/database"
+	"blockchainDemo/errors"
 	"encoding/hex"
 	"fmt"
 	"log"

@@ -1,7 +1,7 @@
 package cert_test
 
 import (
-	"btcDemo/cert"
+	"blockchainDemo/cert"
 	"btcutil"
 	"fmt"
 	"testing"
