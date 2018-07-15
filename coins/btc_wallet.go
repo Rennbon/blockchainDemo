@@ -270,6 +270,8 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 	if err != nil {
 		return err
 	}
+	//这里最好也记一下当前的block count,以便监听block count比此时高度
+	//大6的时候去获取当前TX是否在公链有效
 	dhSrv.AddTx(txHash.String(), addrFrom, []string{addrFrom, addrTo})
 	fmt.Println("Transaction successfully signed")
 	fmt.Println(txHash.String())
