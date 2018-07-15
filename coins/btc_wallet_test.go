@@ -64,7 +64,7 @@ func TestGetUnspentByAddress(t *testing.T) {
 }
 
 func TestSendAddressToAddress(t *testing.T) {
-	err := btc.SendAddressToAddress("mkxMPobtVtgYVXfY2yw8jKfaWHxSbEyGoQ", "mfzqwUyCyWH3ZoKWQG8BcZZkhrPrPG4t3o", 0.1, 0.0001)
+	err := btc.SendAddressToAddress("n4UYCTwXvJ7ijCC9ERGr7qYAuJbiLjUcwT", "mvY3JLZNZrvRewbgMZwvj9CHUJWtQeZjff", 10, 0.0001)
 	if err != nil {
 		t.Error(err)
 	}
@@ -76,4 +76,12 @@ func TestGetTxByAddress(t *testing.T) {
 		t.Error(err)
 	}
 	fmt.Println(txs)
+}
+func TestCheckTxMergerStatus(t *testing.T) {
+	err := btcSrv.CheckTxMergerStatus("7f11a56ce356281ff5244ae57804da370c3cb0b685367088d10bf67be0a93f59")
+	if err != nil {
+		t.Error(err)
+	}
+}
+func Test(t *testing.T) {
 }

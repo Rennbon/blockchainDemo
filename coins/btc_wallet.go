@@ -186,6 +186,10 @@ func (*BtcService) GetUnspentByAddress(address string) (unspents []btcjson.ListU
 	return
 }
 
+//转账
+//addrForm来源地址，addrTo去向地址
+//transfer 转账金额
+//fee 小费
 func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee float64) error {
 	//数据库获取prv pub key等信息，便于调试--------START------
 	actf, err := dhSrv.GetAccountByAddress(addrFrom)
@@ -266,7 +270,7 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 	if err != nil {
 		return err
 	}
-	dhSrv.AddTx("", txHash.String(), addrFrom)
+	dhSrv.AddTx(txHash.String(), addrFrom, []string{addrFrom, addrTo})
 	fmt.Println("Transaction successfully signed")
 	fmt.Println(txHash.String())
 	return nil
@@ -290,6 +294,24 @@ func (*BtcService) GetTxByAddress(addrs []string, name string) (interface{}, err
 		return nil, err
 	}
 	return txs, nil
+}
+
+//验证交易是否被公链证实
+//txid:交易id
+func (*BtcService) CheckTxMergerStatus(txId string) error {
+	txHash, err := chainhash.NewHashFromStr(txId)
+	if err != nil {
+		return err
+	}
+	txResult, err := btcSrv.client.GetTransaction(txHash)
+	if err != nil {
+		return err
+	}
+	//pow共识机制当6个块确认后很难被修改
+	if txResult.Confirmations < 6 {
+		return errors.ERR_UNCONFIRMED
+	}
+	return nil
 }
 
 //签名
@@ -323,6 +345,7 @@ func sign(tx *wire.MsgTx, privKey string, pkScripts [][]byte) error {
 	return nil
 }
 
+//离线签名signTxOut是获取keyDB使用，区分addres的compress状态
 func mkGetKey(keys map[string]addressToKey) txscript.KeyDB {
 	if keys == nil {
 		return txscript.KeyClosure(func(addr btcutil.Address) (*btcec.PrivateKey, bool, error) {

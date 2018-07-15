@@ -64,13 +64,13 @@ func (*DHService) GetAccountByAddresses(addresses []string) (accounts []*Account
 name:用户名
 txid:交易id
 address:地址 */
-func (*DHService) AddTx(name, txId, address string) error {
+func (*DHService) AddTx(txId, addr4 string, addr2 []string) error {
 	session, col := txProvider()
 	defer session.Close()
 	tx := &Tx{
-		Name:    name,
-		Address: address,
-		TxId:    txId,
+		AddressF: addr4,
+		TxId:     txId,
+		AddressT: addr2,
 	}
 	err := col.Insert(tx)
 	if err != nil {
@@ -81,11 +81,11 @@ func (*DHService) AddTx(name, txId, address string) error {
 
 /* 根据address组获取对应的tx信息
 address：地址 */
-func (*DHService) GetTxByAddress(address string) (tx *Tx, err error) {
+func (*DHService) GetTxByAddress(addr4 string) (tx *Tx, err error) {
 	session, col := txProvider()
 	defer session.Close()
 	query := bson.M{
-		"addr": address,
+		"addr": addr4,
 	}
 	var model *Tx
 	err = col.Find(query).One(&model)

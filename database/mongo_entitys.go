@@ -13,8 +13,8 @@ type Account struct {
 }
 
 type Tx struct {
-	Id      bson.ObjectId `bson:"_id,omitempty"`
-	TxId    string        `bson:"txid"`
-	Address string        `bson:"addr"`
-	Name    string        `bson:"nam"`
+	Id       bson.ObjectId `bson:"_id,omitempty"`
+	TxId     string        `bson:"txid"`
+	AddressF string        `bson:"addr4"`
+	AddressT []string      `bson:"addr2"`
 }
