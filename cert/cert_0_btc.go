@@ -8,15 +8,16 @@ import (
 	"github.com/btcsuite/btcutil"
 )
 
-type CertService struct {
+type BtcCertService struct {
 }
 type Key struct {
 	PrivKey string
 	PubKey  string
 	Address string
+	Seed    string
 }
 
-func (*CertService) GenerateSimpleKey() (*Key, error) {
+func (*BtcCertService) GenerateSimpleKey() (*Key, error) {
 
 	privKey, err := btcec.NewPrivateKey(btcec.S256())
 	if err != nil {
@@ -36,7 +37,7 @@ func (*CertService) GenerateSimpleKey() (*Key, error) {
 	addr := pubKey.EncodeAddress()
 	return &Key{PrivKey: privKeyWif.String(), PubKey: pubKey.String(), Address: addr}, nil
 }
-func (*CertService) GetNewAddress(pubKey string) (string, error) {
+func (*BtcCertService) GetNewAddress(pubKey string) (string, error) {
 	pubKeyByte, err := hex.DecodeString(pubKey)
 	if err != nil {
 		return "", err
