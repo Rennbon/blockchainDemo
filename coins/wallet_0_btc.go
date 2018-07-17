@@ -2,7 +2,6 @@ package coins
 
 import (
 	"blockchainDemo/cert"
-	"blockchainDemo/database"
 	"blockchainDemo/errors"
 	"encoding/hex"
 	"fmt"
@@ -21,23 +20,13 @@ import (
 type BtcService struct {
 	client *rpcclient.Client
 }
-type AcountRunMode int
-
-const (
-	_AcountRunMode = iota
-	NoneMode       //什么都不导入
-	PrvMode        //导入私钥
-	PubMode        //导入公钥
-	AddrMode       //导入地址
-)
 
 var (
 	certSrv cert.BtcCertService
 	btcSrv  BtcService
-	dhSrv   database.DHService
 )
 
-func initClinet() {
+func initBtcClinet() {
 	cli, err := rpcclient.New(btcConn, nil)
 	if err != nil {
 		panic("btc rpcclient error.")
@@ -55,7 +44,7 @@ func (*BtcService) GetNewAddress(account string, mode AcountRunMode) (address, a
 	if err != nil {
 		return "", "", err
 	}
-	if err = dhSrv.AddAccount(account, key.PrivKey, key.PubKey, key.Address); err != nil {
+	if err = dhSrv.AddAccount(account, key.PrivKey, key.PubKey, key.Address, key.Seed); err != nil {
 		return "", "", err
 	}
 	switch mode {

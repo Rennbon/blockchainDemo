@@ -4,6 +4,12 @@ import (
 	"reflect"
 )
 
+type Key struct {
+	PrivKey string
+	PubKey  string
+	Address string
+	Seed    string
+}
 type Generater interface {
 	GenerateSimpleKey() (*Key, error)
 	GetNewAddress(string) (string, error)
