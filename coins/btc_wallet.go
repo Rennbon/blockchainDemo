@@ -32,7 +32,7 @@ const (
 )
 
 var (
-	certSrv cert.CertService
+	certSrv cert.BtcCertService
 	btcSrv  BtcService
 	dhSrv   database.DHService
 )
