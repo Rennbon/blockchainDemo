@@ -74,20 +74,21 @@ func (*XlmService) SendAddressToAddress1(addrFrom, addrTo string, transfer, fee 
 
 	tx, err := build.Transaction(
 		build.TestNetwork,
-		build.SourceAccount{addrFrom},
+		build.SourceAccount{addrFrom}, //lumens（代币名称）当前主人的地址
 		build.AutoSequence{horizon.DefaultTestNetClient},
+		build.MemoText{"Just do it"}, //元数据，就是便签
 		build.Payment(
-			build.Destination{addrTo},
-			build.NativeAmount{amount},
+			build.Destination{addrTo},  // lumens（代币名称）下个主人的地址
+			build.NativeAmount{amount}, //官方payments用string主要防止精度丢失
 		),
-		build.BaseFee{uint64(100)},
+		build.BaseFee{uint64(100)}, //小费，不能100都不给，这个是固定的，和btc什么的有区别
 	)
 
 	if err != nil {
 		return err
 	}
 	// Sign the transaction to prove you are actually the person sending it.
-	txe, err := tx.Sign(actf.Seed)
+	txe, err := tx.Sign(actf.Seed) //签名需要用seed
 	if err != nil {
 		return err
 	}
@@ -98,7 +99,7 @@ func (*XlmService) SendAddressToAddress1(addrFrom, addrTo string, transfer, fee 
 	}
 
 	// And finally, send it off to Stellar!
-	resp, err := horizon.DefaultTestNetClient.SubmitTransaction(txeB64)
+	resp, err := horizon.DefaultTestNetClient.SubmitTransaction(txeB64) //用签名画押
 	if err != nil {
 		return err
 	}
@@ -107,4 +108,31 @@ func (*XlmService) SendAddressToAddress1(addrFrom, addrTo string, transfer, fee 
 	fmt.Println("Ledger:", resp.Ledger)
 	fmt.Println("Hash:", resp.Hash)
 	return nil
+}
+
+func GetPaymentsNow() {
+	const address = "GC2BKLYOOYPDEFJKLKY6FNNRQMGFLVHJKQRGNSSRRGSMPGF32LHCQVGF"
+
+	ctx := context.Background()
+
+	cursor := horizon.Cursor("now")
+
+	fmt.Println("Waiting for a payment...")
+
+	err := horizon.DefaultTestNetClient.StreamPayments(ctx, address, &cursor, func(payment horizon.Payment) {
+		fmt.Println("Payment type", payment.Type)
+		fmt.Println("Payment Paging Token", payment.PagingToken)
+		fmt.Println("Payment From", payment.From)
+		fmt.Println("Payment To", payment.To)
+		fmt.Println("Payment Asset Type", payment.AssetType)
+		fmt.Println("Payment Asset Code", payment.AssetCode)
+		fmt.Println("Payment Asset Issuer", payment.AssetIssuer)
+		fmt.Println("Payment Amount", payment.Amount)
+		fmt.Println("Payment Memo Type", payment.Memo.Type)
+		fmt.Println("Payment Memo", payment.Memo.Value)
+	})
+
+	if err != nil {
+		panic(err)
+	}
 }
