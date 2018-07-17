@@ -10,6 +10,7 @@ type Account struct {
 	PubKey  string        `bson:"pubkey"`
 	Name    string        `bson:"nam"`
 	Address string        `bson:"addr"`
+	Seed    string        `bson:"seed"`
 }
 
 type Tx struct {

@@ -10,12 +10,6 @@ import (
 
 type BtcCertService struct {
 }
-type Key struct {
-	PrivKey string
-	PubKey  string
-	Address string
-	Seed    string
-}
 
 func (*BtcCertService) GenerateSimpleKey() (*Key, error) {
 

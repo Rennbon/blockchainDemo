@@ -33,7 +33,10 @@ func initMongo() {
 	if err != nil {
 		panic(err)
 	}
-	loadBlockChainSession(conf)
+	err = loadBlockChainSession(conf)
+	if err != nil {
+		panic(err)
+	}
 	log.Println("database=>mongo=>initMongo sucess")
 }
 func loadBlockChainSession(c *config.Config) error {

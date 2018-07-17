@@ -12,7 +12,7 @@ var btcConn *rpcclient.ConnConfig
 
 func init() {
 	initConfig()
-	initClinet()
+	initBtcClinet()
 }
 func initConfig() {
 	conf, err := config.LoadConfig()

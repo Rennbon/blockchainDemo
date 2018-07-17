@@ -4,6 +4,6 @@ import (
 	"testing"
 )
 
-func TestInit(t *testing.T) {
+func TestInitConfig(t *testing.T) {
 	initConfig()
 }
