@@ -8,7 +8,7 @@ import (
 var dhSrv DHService
 
 func TestAddAccount(t *testing.T) {
-	err := dhSrv.AddAccount("debug", "prv", "pub", "addr")
+	err := dhSrv.AddAccount("debug", "prv", "pub", "seed", "addr", BTC)
 	if err != nil {
 		t.Error(err)
 	}

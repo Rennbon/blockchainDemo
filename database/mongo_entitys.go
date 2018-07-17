@@ -11,6 +11,7 @@ type Account struct {
 	Name    string        `bson:"nam"`
 	Address string        `bson:"addr"`
 	Seed    string        `bson:"seed"`
+	Type    AccountType   `bson:"typ"`
 }
 
 type Tx struct {
@@ -19,3 +20,10 @@ type Tx struct {
 	AddressF string        `bson:"addr4"`
 	AddressT []string      `bson:"addr2"`
 }
+
+type AccountType int
+
+const (
+	BTC AccountType = iota
+	XLM
+)

@@ -10,7 +10,7 @@ type DHService struct {
 name:用户名
 prvkey:私钥
 pubkey:公钥 */
-func (*DHService) AddAccount(name, prvKey, pubKey, address, seed string) error {
+func (*DHService) AddAccount(name, prvKey, pubKey, address, seed string, typ AccountType) error {
 	session, col := accountProvider()
 	defer session.Close()
 	acc := &Account{
@@ -19,6 +19,7 @@ func (*DHService) AddAccount(name, prvKey, pubKey, address, seed string) error {
 		PubKey:  pubKey,
 		Address: address,
 		Seed:    seed,
+		Type:    typ,
 	}
 	err := col.Insert(acc)
 	if err != nil {

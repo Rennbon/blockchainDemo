@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 
+	"blockchainDemo/database"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -44,7 +45,7 @@ func (*BtcService) GetNewAddress(account string, mode AcountRunMode) (address, a
 	if err != nil {
 		return "", "", err
 	}
-	if err = dhSrv.AddAccount(account, key.PrivKey, key.PubKey, key.Address, key.Seed); err != nil {
+	if err = dhSrv.AddAccount(account, key.PrivKey, key.PubKey, key.Address, key.Seed, database.BTC); err != nil {
 		return "", "", err
 	}
 	switch mode {
