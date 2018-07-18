@@ -2,15 +2,17 @@ package coins
 
 import (
 	"blockchainDemo/cert"
+	"blockchainDemo/errors"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-
 	"strconv"
 
 	"blockchainDemo/database"
 	"github.com/stellar/go/build"
 	"github.com/stellar/go/clients/horizon"
+	"time"
 )
 
 type XlmService struct {
@@ -18,7 +20,7 @@ type XlmService struct {
 
 var (
 	certXlmSrv cert.XlmCertService
-	XlmSrv     XlmService
+	xlmSrv     XlmService
 )
 
 func (*XlmService) GetNewAddress1(account string, mode AcountRunMode) (address, accountOut string, err error) {
@@ -49,10 +51,16 @@ func (*XlmService) GetBalanceInAddress1(address string) (balance float64, err er
 	if err != nil {
 		return 0, err
 	}
+	bls := float64(0)
 	for _, v := range account.Balances {
 		fmt.Println(v.Balance)
+		curBls, err := strconv.ParseFloat(v.Balance, 64)
+		if err != nil {
+			return 0, err
+		}
+		bls += curBls
 	}
-	return 0, nil
+	return bls, nil
 }
 
 //转账
@@ -70,8 +78,20 @@ func (*XlmService) SendAddressToAddress1(addrFrom, addrTo string, transfer, fee 
 	if _, err := horizon.DefaultTestNetClient.LoadAccount(addrTo); err != nil {
 		return nil
 	}
-	amount := strconv.FormatFloat(transfer, 'f', 6, 64)
+	//获取账号总金额
+	bls, err := xlmSrv.GetBalanceInAddress1(addrFrom)
+	if err != nil {
+		return err
+	}
 
+	amount := strconv.FormatFloat(transfer, 'f', 6, 64)
+	baseFee := float64(100)
+
+	totalTran := transfer + baseFee
+	if totalTran > bls {
+		return errors.ERR_NOT_ENOUGH_COIN
+	}
+	//简单转给同一个
 	tx, err := build.Transaction(
 		build.TestNetwork,
 		build.SourceAccount{addrFrom}, //lumens（代币名称）当前主人的地址
@@ -81,7 +101,11 @@ func (*XlmService) SendAddressToAddress1(addrFrom, addrTo string, transfer, fee 
 			build.Destination{addrTo},  // lumens（代币名称）下个主人的地址
 			build.NativeAmount{amount}, //官方payments用string主要防止精度丢失
 		),
-		build.BaseFee{uint64(100)}, //小费，不能100都不给，这个是固定的，和btc什么的有区别
+		/*build.Payment(
+			build.Destination{addrTo},  // lumens（代币名称）下个主人的地址
+			build.NativeAmount{amount}, //官方payments用string主要防止精度丢失
+		),*/
+		build.BaseFee{uint64(baseFee)}, //小费，不能100都不给，多笔payment to other则相应的100*N，这个是固定的，和btc什么的有区别
 	)
 
 	if err != nil {
@@ -110,14 +134,18 @@ func (*XlmService) SendAddressToAddress1(addrFrom, addrTo string, transfer, fee 
 	return nil
 }
 
-func GetPaymentsNow() {
-	const address = "GC2BKLYOOYPDEFJKLKY6FNNRQMGFLVHJKQRGNSSRRGSMPGF32LHCQVGF"
-
-	ctx := context.Background()
-
+//查询当前地址最近一笔交易情况
+//获取时间较长，暂时未知返回总是： only expected 1 event, got: 0
+//这个方法因为响应时间问题，如果要对接最好限流
+func (*XlmService) GetPaymentsNow(address string) error {
 	cursor := horizon.Cursor("now")
-
 	fmt.Println("Waiting for a payment...")
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		// Stop streaming after 60 seconds.
+		time.Sleep(60 * time.Second)
+		cancel()
+	}()
 
 	err := horizon.DefaultTestNetClient.StreamPayments(ctx, address, &cursor, func(payment horizon.Payment) {
 		fmt.Println("Payment type", payment.Type)
@@ -133,6 +161,27 @@ func GetPaymentsNow() {
 	})
 
 	if err != nil {
-		panic(err)
+		return err
 	}
+	return nil
+}
+
+//获取所有账户信息
+func (*XlmService) GetAccount(address string) error {
+
+	account, err := horizon.DefaultTestNetClient.LoadAccount(address)
+	if err != nil {
+		return err
+	}
+	fmt.Println(account)
+	return nil
+}
+func (*XlmService) GetAllApi(address string) error {
+	hd, err := horizon.DefaultTestNetClient.HomeDomainForAccount(address)
+	fmt.Println(hd, err)
+
+	/*	horizon.DefaultTestNetClient.LoadAccountMergeAmount(&horizon.Payment{})
+		horizon.DefaultTestNetClient.lo*/
+
+	return nil
 }

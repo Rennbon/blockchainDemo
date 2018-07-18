@@ -27,9 +27,21 @@ func TestSendAddressToAddress1(t *testing.T) {
 	err := xlm.SendAddressToAddress1(
 		"GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX",
 		"GD43TZONCLLNDHA5ALVRWZKMATTOKNLLTH3XTAJN6SQK77Q3ZT44QJJV",
-		20,
+		5.5,
 		0.0001,
 	)
+	if err != nil {
+		t.Error(err)
+	}
+}
+func TestGetPaymentsNow(t *testing.T) {
+	err := xlm.GetPaymentsNow("GC2BKLYOOYPDEFJKLKY6FNNRQMGFLVHJKQRGNSSRRGSMPGF32LHCQVGF")
+	if err != nil {
+		t.Error(err)
+	}
+}
+func TestGetAccount(t *testing.T) {
+	err := xlm.GetAccount("GC2BKLYOOYPDEFJKLKY6FNNRQMGFLVHJKQRGNSSRRGSMPGF32LHCQVGF")
 	if err != nil {
 		t.Error(err)
 	}
