@@ -10,6 +10,7 @@ type XlmCertService struct {
 //	生成种子和address
 func (*XlmCertService) GenerateSimpleKey() (*Key, error) {
 	pair, err := keypair.Random()
+
 	if err != nil {
 		return nil, err
 	}

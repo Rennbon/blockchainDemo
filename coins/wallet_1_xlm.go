@@ -2,17 +2,17 @@ package coins
 
 import (
 	"blockchainDemo/cert"
-	"blockchainDemo/errors"
 	"context"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"strconv"
+
+	"time"
 
 	"blockchainDemo/database"
 	"github.com/stellar/go/build"
 	"github.com/stellar/go/clients/horizon"
-	"time"
+	"io/ioutil"
+	"net/http"
 )
 
 type XlmService struct {
@@ -24,26 +24,56 @@ var (
 )
 
 func (*XlmService) GetNewAddress1(account string, mode AcountRunMode) (address, accountOut string, err error) {
-	// pair is the pair that was generated from previous example, or create a pair based on
-	// existing keys.
 	key, err := certXlmSrv.GenerateSimpleKey()
 	if err != nil {
-		return "", "", err
+		return
 	}
+	//----------测试网络创建--------start------------
 	resp, err := http.Get("https://friendbot.stellar.org/?addr=" + key.Address)
 	if err != nil {
-		return "", "", err
+		return
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	_, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", "", err
+		return
 	}
+	//----------测试网络创建--------end------------
+	//----------真实网络创建--------start------------
+	//创建新账户必须从已有资金的账户转账生成，所以理论上生产环境要用，必须要提供一个有钱的账户作为God来来创造一切
+	/*	seed := "SAACHR2TWFAJKLLLC5TEYTSYPXA7AIBM6A2KZ7MQ4XEYRJEZFNOR6VOC"
+		tx, err := build.Transaction(
+			build.TestNetwork,
+			build.Sequence{1},
+			build.SourceAccount{seed},
+			build.MemoText{"Create Account"}, //元数据，就是便签
+			build.CreateAccount(
+				build.Destination{key.Address},
+				build.NativeAmount{"50"},
+			),
+		)
+		if err != nil {
+			return
+		}
+		// Sign the transaction to prove you are actually the person sending it.
+		txe, err := tx.Sign(seed) //签名需要用seed
+		if err != nil {
+			return
+		}
+		txeB64, err := txe.Base64()
+		if err != nil {
+			return
+		}
+		rsp, err := horizon.DefaultTestNetClient.SubmitTransaction(txeB64) //用签名画押
+		if err != nil {
+			return
+		}
+		fmt.Println(rsp)*/
+	//----------真实网络创建--------end------------
 	err = dhSrv.AddAccount(account, key.PrivKey, key.PubKey, key.Address, key.Seed, database.XLM)
 	if err != nil {
-		return "", "", err
+		return
 	}
-	fmt.Println(string(body))
 	return key.Address, account, nil
 }
 func (*XlmService) GetBalanceInAddress1(address string) (balance float64, err error) {
@@ -78,34 +108,31 @@ func (*XlmService) SendAddressToAddress1(addrFrom, addrTo string, transfer, fee 
 	if _, err := horizon.DefaultTestNetClient.LoadAccount(addrTo); err != nil {
 		return nil
 	}
-	//获取账号总金额
-	bls, err := xlmSrv.GetBalanceInAddress1(addrFrom)
-	if err != nil {
-		return err
-	}
 
 	amount := strconv.FormatFloat(transfer, 'f', 6, 64)
-	baseFee := float64(100)
+	//获取账号总金额
+	/*	bls, err := xlmSrv.GetBalanceInAddress1(addrFrom)
+		if err != nil {
+			return err
+		}
 
-	totalTran := transfer + baseFee
-	if totalTran > bls {
-		return errors.ERR_NOT_ENOUGH_COIN
-	}
-	//简单转给同一个
+
+		baseFee := float64(100)
+
+		totalTran := transfer + baseFee
+		if totalTran > bls {
+			return errors.ERR_NOT_ENOUGH_COIN
+		}*/
+	//小费是自己扣的，不需要这边实现，金额总数也不需要验证，当然可以验证
 	tx, err := build.Transaction(
 		build.TestNetwork,
-		build.SourceAccount{addrFrom}, //lumens（代币名称）当前主人的地址
-		build.AutoSequence{horizon.DefaultTestNetClient},
-		build.MemoText{"Just do it"}, //元数据，就是便签
+		build.SourceAccount{addrFrom},                    //lumens（代币名称）当前主人的地址
+		build.AutoSequence{horizon.DefaultTestNetClient}, //选择网络
+		build.MemoText{"Just do it"},                     //元数据，就是便签
 		build.Payment(
 			build.Destination{addrTo},  // lumens（代币名称）下个主人的地址
 			build.NativeAmount{amount}, //官方payments用string主要防止精度丢失
 		),
-		/*build.Payment(
-			build.Destination{addrTo},  // lumens（代币名称）下个主人的地址
-			build.NativeAmount{amount}, //官方payments用string主要防止精度丢失
-		),*/
-		build.BaseFee{uint64(baseFee)}, //小费，不能100都不给，多笔payment to other则相应的100*N，这个是固定的，和btc什么的有区别
 	)
 
 	if err != nil {
@@ -119,18 +146,14 @@ func (*XlmService) SendAddressToAddress1(addrFrom, addrTo string, transfer, fee 
 
 	txeB64, err := txe.Base64()
 	if err != nil {
-		panic(err)
-	}
-
-	// And finally, send it off to Stellar!
-	resp, err := horizon.DefaultTestNetClient.SubmitTransaction(txeB64) //用签名画押
-	if err != nil {
 		return err
 	}
 
-	fmt.Println("Successful Transaction:")
-	fmt.Println("Ledger:", resp.Ledger)
-	fmt.Println("Hash:", resp.Hash)
+	// And finally, send it off to Stellar!
+	_, err = horizon.DefaultTestNetClient.SubmitTransaction(txeB64) //用签名画押
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -184,4 +207,42 @@ func (*XlmService) GetAllApi(address string) error {
 		horizon.DefaultTestNetClient.lo*/
 
 	return nil
+}
+
+func (*XlmService) ClearAccount(from, to string) (err error) {
+	//数据库获取prv pub key等信息，便于调试--------START------
+	actf, err := dhSrv.GetAccountByAddress(from)
+	if err != nil {
+		return
+	}
+	//----------------------------------------END-----------
+	tx, err := build.Transaction(
+		build.SourceAccount{from},
+		build.Sequence{1},
+		build.TestNetwork,
+		build.AccountMerge(
+			build.Destination{to},
+		),
+	)
+	if err != nil {
+		return
+	}
+
+	txe, err := tx.Sign(actf.Seed)
+	if err != nil {
+		return
+	}
+
+	txeB64, err := txe.Base64()
+
+	if err != nil {
+		return
+	}
+
+	// And finally, send it off to Stellar!
+	_, err = horizon.DefaultTestNetClient.SubmitTransaction(txeB64) //用签名画押
+	if err != nil {
+		return
+	}
+	return
 }

@@ -27,7 +27,7 @@ func TestSendAddressToAddress1(t *testing.T) {
 	err := xlm.SendAddressToAddress1(
 		"GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX",
 		"GD43TZONCLLNDHA5ALVRWZKMATTOKNLLTH3XTAJN6SQK77Q3ZT44QJJV",
-		5.5,
+		1,
 		0.0001,
 	)
 	if err != nil {
@@ -42,6 +42,12 @@ func TestGetPaymentsNow(t *testing.T) {
 }
 func TestGetAccount(t *testing.T) {
 	err := xlm.GetAccount("GC2BKLYOOYPDEFJKLKY6FNNRQMGFLVHJKQRGNSSRRGSMPGF32LHCQVGF")
+	if err != nil {
+		t.Error(err)
+	}
+}
+func TestClearAccount(t *testing.T) {
+	err := xlm.ClearAccount("GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX", "GD43TZONCLLNDHA5ALVRWZKMATTOKNLLTH3XTAJN6SQK77Q3ZT44QJJV")
 	if err != nil {
 		t.Error(err)
 	}
