@@ -29,6 +29,8 @@ var (
 
 )
 
+//生成新账号
+//
 func (*XlmService) GetNewAddress1(account string, mode AcountRunMode) (address, accountOut string, err error) {
 	key, err := certXlmSrv.GenerateSimpleKey()
 	if err != nil {
@@ -50,16 +52,12 @@ func (*XlmService) GetNewAddress1(account string, mode AcountRunMode) (address, 
 	//创建新账户必须从已有资金的账户转账生成，所以理论上生产环境要用，必须要提供一个有钱的账户作为God来来创造一切
 	godSeed := "SAACHR2TWFAJKLLLC5TEYTSYPXA7AIBM6A2KZ7MQ4XEYRJEZFNOR6VOC"
 	godAddress := "GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX"
-	//验证godSeed钱够不够
-	balance, err := xlmSrv.GetBalanceInAddress1(godAddress)
-	if err != nil {
-		return
-	}
+
 	//源账号不要开通其他付费条目
 	//源账户保底剩余 基础保证金*2
 	//新账户保底创建 基础保证金*2
-	if balance < baseReserve*2+0.0001+baseReserve*2 {
-		err = errors.ERR_Base_NO_COIN
+	comparedAmount := baseReserve*2 + baseFee + baseReserve*2
+	if err = checkBalanceEnough(godAddress, comparedAmount); err != nil {
 		return
 	}
 	//获取序列数
@@ -146,17 +144,10 @@ func (*XlmService) SendAddressToAddress1(addrFrom, addrTo string, transfer, fee 
 	//The base reserve (currently 0.5 XLM) is used in minimum account balances.
 	//(2 + n) × base reserve = 2.5 XLM.
 	amount := strconv.FormatFloat(transfer, 'f', 6, 64)
-	//获取账号总金额，提前过滤金额不够的场景，防止提交后回滚但是扣掉fee
-	bls, err := xlmSrv.GetBalanceInAddress1(addrFrom)
-	if err != nil {
+	//验证金额总数
+	comparedAmount := transfer + baseFee + baseReserve*2*2
+	if err = checkBalanceEnough(addrFrom, comparedAmount); err != nil {
 		return err
-	}
-
-	baseFee := float64(100)
-
-	totalTran := transfer + baseFee
-	if totalTran > bls {
-		return errors.ERR_NOT_ENOUGH_COIN
 	}
 	//小费是自己扣的，不需要这边实现，金额总数也不需要验证，当然可以验证
 	tx, err := build.Transaction(
@@ -168,6 +159,7 @@ func (*XlmService) SendAddressToAddress1(addrFrom, addrTo string, transfer, fee 
 			build.Destination{addrTo},  // lumens（代币名称）下个主人的地址
 			build.NativeAmount{amount}, //官方payments用string主要防止精度丢失
 		),
+		//build.BaseFee{baseFeeLemuns},//小费不写也会扣，只要钱够
 	)
 
 	if err != nil {
@@ -189,8 +181,14 @@ func (*XlmService) SendAddressToAddress1(addrFrom, addrTo string, transfer, fee 
 	if err != nil {
 		return err
 	}
+	//存储到数据库，方便检验
 	dhSrv.AddTx(resp.Hash, addrFrom, []string{addrTo})
 	return nil
+}
+
+func (*XlmService) GetTxByAddress1(txId string) (tx horizon.Transaction, err error) {
+	tx, err = horizon.DefaultTestNetClient.LoadTransaction(txId)
+	return
 }
 
 //查询当前地址最近一笔交易情况
@@ -202,7 +200,7 @@ func (*XlmService) GetPaymentsNow(address string) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		// Stop streaming after 60 seconds.
-		time.Sleep(60 * time.Second)
+		time.Sleep(120 * time.Second)
 		cancel()
 	}()
 
@@ -284,6 +282,21 @@ func (*XlmService) ClearAccount(from, to string) (err error) {
 	return
 }
 
+///////////////////////////////////////////////////内部方法////////////////////////////////////////////////////////
+//验证balance是否足够创建tx并成功
+//sourceAddress 付款地址
+//comparedAmount 目标金额
+func checkBalanceEnough(sourceAddress string, comparedAmount float64) error {
+	balance, err := xlmSrv.GetBalanceInAddress1(sourceAddress)
+	if err != nil {
+		return err
+	}
+	if balance < comparedAmount {
+		return errors.ERR_NOT_ENOUGH_COIN
+	}
+	return nil
+}
+
 /////////////////////////////////////////////////////just for test///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func (*XlmService) Other() {
@@ -291,10 +304,11 @@ func (*XlmService) Other() {
 	fmt.Println(homeDomain, err)
 	offerset, err := horizon.DefaultTestNetClient.LoadAccountOffers("GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX")
 	fmt.Println(offerset, err)
-	//horizon.DefaultTestNetClient.LoadTransaction()
+	horizon.DefaultTestNetClient.LoadOperation("")
+
 }
 
-//
+//获取账户序列数
 func (*XlmService) SequenceForAccount(account string) error {
 	num, err := horizon.DefaultTestNetClient.SequenceForAccount(account)
 	if err != nil {

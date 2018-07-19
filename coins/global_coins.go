@@ -1,6 +1,8 @@
 package coins
 
-import "blockchainDemo/database"
+import (
+	"blockchainDemo/database"
+)
 
 type AcountRunMode int
 
@@ -13,3 +15,9 @@ const (
 )
 
 var dhSrv database.DHService
+
+type Coiner interface {
+	GetNewAddress(string, AcountRunMode) (address, account string, err error)
+	GetBalanceInAddress(string) (balance float64, err error)
+	SendAddressToAddress(addrFrom, addrTo string, transfer, fee float64) error
+}
