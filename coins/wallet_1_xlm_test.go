@@ -15,7 +15,7 @@ func TestGetNewAddress1(t *testing.T) {
 	fmt.Printf("address:%s\n\raccount:%s\n\r", address, account)
 }
 func TestGetBalanceInAddress1(t *testing.T) {
-	balance, err := xlm.GetBalanceInAddress1("GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX")
+	balance, err := xlm.GetBalanceInAddress1("GDJ22GN5AIOL63PCEZM7MJFKX2IYVVCVDO73HTBAKHPRGRPFZBMOQTR4")
 	if err != nil {
 		t.Error(err)
 	}
@@ -48,6 +48,13 @@ func TestGetAccount(t *testing.T) {
 }
 func TestClearAccount(t *testing.T) {
 	err := xlm.ClearAccount("GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX", "GD43TZONCLLNDHA5ALVRWZKMATTOKNLLTH3XTAJN6SQK77Q3ZT44QJJV")
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestSequenceForAccount(t *testing.T) {
+	err := xlm.SequenceForAccount("GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX")
 	if err != nil {
 		t.Error(err)
 	}

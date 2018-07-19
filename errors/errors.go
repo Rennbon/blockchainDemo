@@ -9,4 +9,6 @@ var (
 	ERR_NOPE                 = errors.New("nope.")
 	ERR_NOT_ENOUGH_COIN      = errors.New("not enough coin.")
 	ERR_UNCONFIRMED          = errors.New("tx unconfirmed.")
+
+	ERR_Base_NO_COIN = errors.New("base account have no coin")
 )

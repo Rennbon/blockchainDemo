@@ -9,10 +9,11 @@ import (
 	"time"
 
 	"blockchainDemo/database"
+	"blockchainDemo/errors"
+
+	"encoding/json"
 	"github.com/stellar/go/build"
 	"github.com/stellar/go/clients/horizon"
-	"io/ioutil"
-	"net/http"
 )
 
 type XlmService struct {
@@ -21,6 +22,11 @@ type XlmService struct {
 var (
 	certXlmSrv cert.XlmCertService
 	xlmSrv     XlmService
+
+	baseReserve   float64 = 0.5    //账户保证金基数
+	baseFee       float64 = 0.0001 //小费基数（单位:xlm）
+	baseFeeLemuns uint64  = 100    //小费 (单位：lumens)
+
 )
 
 func (*XlmService) GetNewAddress1(account string, mode AcountRunMode) (address, accountOut string, err error) {
@@ -28,8 +34,9 @@ func (*XlmService) GetNewAddress1(account string, mode AcountRunMode) (address, 
 	if err != nil {
 		return
 	}
-	//----------测试网络创建--------start------------
-	resp, err := http.Get("https://friendbot.stellar.org/?addr=" + key.Address)
+
+	//----------测试网络源账号创建--------start------------
+	/*resp, err := http.Get("https://friendbot.stellar.org/?addr=" + key.Address)
 	if err != nil {
 		return
 	}
@@ -37,39 +44,64 @@ func (*XlmService) GetNewAddress1(account string, mode AcountRunMode) (address, 
 	_, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return
-	}
-	//----------测试网络创建--------end------------
-	//----------真实网络创建--------start------------
+	}*/
+	//----------测试网络源账号创建--------end------------
+	//----------源账号创建--------start------------
 	//创建新账户必须从已有资金的账户转账生成，所以理论上生产环境要用，必须要提供一个有钱的账户作为God来来创造一切
-	/*	seed := "SAACHR2TWFAJKLLLC5TEYTSYPXA7AIBM6A2KZ7MQ4XEYRJEZFNOR6VOC"
-		tx, err := build.Transaction(
-			build.TestNetwork,
-			build.Sequence{1},
-			build.SourceAccount{seed},
-			build.MemoText{"Create Account"}, //元数据，就是便签
-			build.CreateAccount(
-				build.Destination{key.Address},
-				build.NativeAmount{"50"},
-			),
-		)
-		if err != nil {
-			return
-		}
-		// Sign the transaction to prove you are actually the person sending it.
-		txe, err := tx.Sign(seed) //签名需要用seed
-		if err != nil {
-			return
-		}
-		txeB64, err := txe.Base64()
-		if err != nil {
-			return
-		}
-		rsp, err := horizon.DefaultTestNetClient.SubmitTransaction(txeB64) //用签名画押
-		if err != nil {
-			return
-		}
-		fmt.Println(rsp)*/
-	//----------真实网络创建--------end------------
+	godSeed := "SAACHR2TWFAJKLLLC5TEYTSYPXA7AIBM6A2KZ7MQ4XEYRJEZFNOR6VOC"
+	godAddress := "GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX"
+	//验证godSeed钱够不够
+	balance, err := xlmSrv.GetBalanceInAddress1(godAddress)
+	if err != nil {
+		return
+	}
+	//源账号不要开通其他付费条目
+	//源账户保底剩余 基础保证金*2
+	//新账户保底创建 基础保证金*2
+	if balance < baseReserve*2+0.0001+baseReserve*2 {
+		err = errors.ERR_Base_NO_COIN
+		return
+	}
+	//获取序列数
+	num, err := horizon.DefaultTestNetClient.SequenceForAccount(godAddress)
+	if err != nil {
+		return
+	}
+	/*
+		Trustlines
+		Offers
+		Signers    新用户初始化会有一条singer
+		Data entries
+	*/
+	amount := baseReserve * 2 //基础+Singer=2条
+	amountStr := strconv.FormatFloat(amount, 'f', 6, 64)
+	tx, err := build.Transaction(
+		build.TestNetwork,
+		build.Sequence{uint64(num) + 1}, //这里用autoSequence 失败了，公链可以在尝试下
+		build.SourceAccount{godSeed},
+		build.MemoText{"Create Account"}, //元数据，就是便签
+		build.CreateAccount(
+			build.Destination{key.Address},
+			build.NativeAmount{amountStr}, //初始账号最小为0.5Lumens
+		),
+		build.BaseFee{baseFeeLemuns},
+	)
+	if err != nil {
+		return
+	}
+	txe, err := tx.Sign(godSeed) //画押
+	if err != nil {
+		return
+	}
+	txeB64, err := txe.Base64()
+	if err != nil {
+		return
+	}
+	_, err = horizon.DefaultTestNetClient.SubmitTransaction(txeB64) //提交tx
+	if err != nil {
+		return
+	}
+	//----------源账号创建--------end------------
 	err = dhSrv.AddAccount(account, key.PrivKey, key.PubKey, key.Address, key.Seed, database.XLM)
 	if err != nil {
 		return
@@ -108,26 +140,29 @@ func (*XlmService) SendAddressToAddress1(addrFrom, addrTo string, transfer, fee 
 	if _, err := horizon.DefaultTestNetClient.LoadAccount(addrTo); err != nil {
 		return nil
 	}
-
+	//100 stroops (0.00001 XLM).
+	//The base fee (currently 100 stroops) is used in transaction fees.
+	//sumfee = num of operations × base fee
+	//The base reserve (currently 0.5 XLM) is used in minimum account balances.
+	//(2 + n) × base reserve = 2.5 XLM.
 	amount := strconv.FormatFloat(transfer, 'f', 6, 64)
-	//获取账号总金额
-	/*	bls, err := xlmSrv.GetBalanceInAddress1(addrFrom)
-		if err != nil {
-			return err
-		}
+	//获取账号总金额，提前过滤金额不够的场景，防止提交后回滚但是扣掉fee
+	bls, err := xlmSrv.GetBalanceInAddress1(addrFrom)
+	if err != nil {
+		return err
+	}
 
+	baseFee := float64(100)
 
-		baseFee := float64(100)
-
-		totalTran := transfer + baseFee
-		if totalTran > bls {
-			return errors.ERR_NOT_ENOUGH_COIN
-		}*/
+	totalTran := transfer + baseFee
+	if totalTran > bls {
+		return errors.ERR_NOT_ENOUGH_COIN
+	}
 	//小费是自己扣的，不需要这边实现，金额总数也不需要验证，当然可以验证
 	tx, err := build.Transaction(
 		build.TestNetwork,
 		build.SourceAccount{addrFrom},                    //lumens（代币名称）当前主人的地址
-		build.AutoSequence{horizon.DefaultTestNetClient}, //选择网络
+		build.AutoSequence{horizon.DefaultTestNetClient}, //sequence序列号自动
 		build.MemoText{"Just do it"},                     //元数据，就是便签
 		build.Payment(
 			build.Destination{addrTo},  // lumens（代币名称）下个主人的地址
@@ -150,10 +185,11 @@ func (*XlmService) SendAddressToAddress1(addrFrom, addrTo string, transfer, fee 
 	}
 
 	// And finally, send it off to Stellar!
-	_, err = horizon.DefaultTestNetClient.SubmitTransaction(txeB64) //用签名画押
+	resp, err := horizon.DefaultTestNetClient.SubmitTransaction(txeB64) //提交tx
 	if err != nil {
 		return err
 	}
+	dhSrv.AddTx(resp.Hash, addrFrom, []string{addrTo})
 	return nil
 }
 
@@ -196,7 +232,8 @@ func (*XlmService) GetAccount(address string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(account)
+	js, err := json.Marshal(account)
+	fmt.Println(string(js))
 	return nil
 }
 func (*XlmService) GetAllApi(address string) error {
@@ -240,9 +277,29 @@ func (*XlmService) ClearAccount(from, to string) (err error) {
 	}
 
 	// And finally, send it off to Stellar!
-	_, err = horizon.DefaultTestNetClient.SubmitTransaction(txeB64) //用签名画押
+	_, err = horizon.DefaultTestNetClient.SubmitTransaction(txeB64) //提交交易
 	if err != nil {
 		return
 	}
 	return
+}
+
+/////////////////////////////////////////////////////just for test///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+func (*XlmService) Other() {
+	homeDomain, err := horizon.DefaultTestNetClient.HomeDomainForAccount("GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX")
+	fmt.Println(homeDomain, err)
+	offerset, err := horizon.DefaultTestNetClient.LoadAccountOffers("GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX")
+	fmt.Println(offerset, err)
+	//horizon.DefaultTestNetClient.LoadTransaction()
+}
+
+//
+func (*XlmService) SequenceForAccount(account string) error {
+	num, err := horizon.DefaultTestNetClient.SequenceForAccount(account)
+	if err != nil {
+		return err
+	}
+	fmt.Println(num)
+	return nil
 }
