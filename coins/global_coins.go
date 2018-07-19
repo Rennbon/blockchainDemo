@@ -2,6 +2,7 @@ package coins
 
 import (
 	"blockchainDemo/database"
+	"reflect"
 )
 
 type AcountRunMode int
@@ -17,7 +18,22 @@ const (
 var dhSrv database.DHService
 
 type Coiner interface {
-	GetNewAddress(string, AcountRunMode) (address, account string, err error)
+	GetNewAddress(string, AcountRunMode) (address, accountOut string, err error)
 	GetBalanceInAddress(string) (balance float64, err error)
-	SendAddressToAddress(addrFrom, addrTo string, transfer, fee float64) error
+	SendAddressToAddress(addrFrom, addrTo string, transfer, fee float64) (txId string, err error)
+	CheckTxStatus(string) error
+}
+
+type CoinHandler struct {
+	Coiner
+	TypeName string
+}
+
+func (ch *CoinHandler) LoadService(g Coiner) error {
+	if g != nil {
+		ch.Coiner = g
+	}
+	typ := reflect.TypeOf(g)
+	ch.TypeName = typ.String()
+	return nil
 }

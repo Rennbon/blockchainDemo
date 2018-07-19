@@ -31,7 +31,7 @@ var (
 
 //生成新账号
 //
-func (*XlmService) GetNewAddress1(account string, mode AcountRunMode) (address, accountOut string, err error) {
+func (*XlmService) GetNewAddress(account string, mode AcountRunMode) (address, accountOut string, err error) {
 	key, err := certXlmSrv.GenerateSimpleKey()
 	if err != nil {
 		return
