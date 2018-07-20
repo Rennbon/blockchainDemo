@@ -13,12 +13,6 @@ func TestGetPaymentsNow(t *testing.T) {
 	}
 }
 
-/*func TestGetAccount(t *testing.T) {
-	err := xlm.GetAccount("GD43TZONCLLNDHA5ALVRWZKMATTOKNLLTH3XTAJN6SQK77Q3ZT44QJJV")
-	if err != nil {
-		t.Error(err)
-	}
-}*/
 func TestClearAccount(t *testing.T) {
 	err := xlm.ClearAccount("GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX", "GD43TZONCLLNDHA5ALVRWZKMATTOKNLLTH3XTAJN6SQK77Q3ZT44QJJV")
 	if err != nil {
@@ -27,36 +21,8 @@ func TestClearAccount(t *testing.T) {
 }
 
 func TestSequenceForAccount(t *testing.T) {
-	err := xlm.SequenceForAccount("GCXQIFHEJDDL7MT3DJVSGPTRSG5K4YPTF2VYFS47DSCDJBOOJSH4TNLL")
+	err := sequenceForAccount("GCXQIFHEJDDL7MT3DJVSGPTRSG5K4YPTF2VYFS47DSCDJBOOJSH4TNLL")
 	if err != nil {
 		t.Error(err)
 	}
 }
-
-/*func TestGetNewAddress1(t *testing.T) {
-	address, account, err := xlm.GetNewAddress1("", AddrMode)
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Printf("address:%s\n\raccount:%s\n\r", address, account)
-}*/
-/*func TestGetBalanceInAddress1(t *testing.T) {
-	balance, err := xlm.GetBalanceInAddress1("GD43TZONCLLNDHA5ALVRWZKMATTOKNLLTH3XTAJN6SQK77Q3ZT44QJJV")
-	if err != nil {
-		t.Error(err)
-	}
-	fmt.Println(balance)
-}
-*/
-/*func TestSendAddressToAddress1(t *testing.T) {
-
-	err := xlm.SendAddressToAddress1(
-		"GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX",
-		"GCXQIFHEJDDL7MT3DJVSGPTRSG5K4YPTF2VYFS47DSCDJBOOJSH4TNLL",
-		12,
-		0.0001,
-	)
-	if err != nil {
-		t.Error(err)
-	}
-}*/

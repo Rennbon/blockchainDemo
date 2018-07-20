@@ -37,6 +37,7 @@ func initBtcClinet() {
 	log.Println("coins=>btc_wallet=>initClinet sccuess.")
 }
 
+/////////////////////////////////////////全局接口///////START////////////////////////////////////////
 /*
 *获取新的地址
 *account:账户名
@@ -53,13 +54,13 @@ func (*BtcService) GetNewAddress(account string, mode AcountRunMode) (address, a
 	case NoneMode:
 		break
 	case PrvMode:
-		account, err = btcSrv.AddPrvkeyToWallet(key.PrivKey, account)
+		account, err = addPrvkeyToWallet(key.PrivKey, account)
 		break
 	case PubMode:
-		account, err = btcSrv.AddPubkeyToWallet(key.PubKey, account)
+		account, err = addPubkeyToWallet(key.PubKey, account)
 		break
 	case AddrMode:
-		account, err = btcSrv.AddAddressToWallet(key.PubKey, account)
+		account, err = addAddressToWallet(key.PubKey, account)
 		break
 	default:
 		break
@@ -68,58 +69,6 @@ func (*BtcService) GetNewAddress(account string, mode AcountRunMode) (address, a
 		return
 	}
 	return key.Address, account, nil
-}
-
-/* 导入privatekey,这个导入能在coin.core上直接listaccounts查看到，因为有私钥了 */
-func (*BtcService) AddPrvkeyToWallet(prvkey, accoutIn string) (accountOut string, err error) {
-	wif, err := btcutil.DecodeWIF(prvkey)
-	if err != nil {
-		return
-	}
-	if err = btcSrv.client.ImportPrivKeyLabel(wif, accoutIn); err != nil {
-		return
-	}
-	return accoutIn, nil
-}
-
-/* 将publickey对应的address添加到链中，
-pubKey 公钥
-account 地址自定义名称 */
-func (*BtcService) AddPubkeyToWallet(pubKey, accountIn string) (accountOut string, err error) {
-	//验证地址是否已存在
-	err = btcSrv.CheckAddressExists(pubKey)
-	if err != nil {
-		return
-	}
-	if err = btcSrv.client.ImportPubKey(pubKey); err != nil {
-		return
-	}
-	address, _ := btcutil.DecodeAddress(pubKey, &chaincfg.RegressionNetParams)
-	//修改名字 忽略错误
-	if err = btcSrv.client.SetAccount(address, accountIn); err != nil {
-		return
-	}
-	return accountIn, nil
-}
-
-/* 将publickey对应的address添加到链中，
-pubKey 公钥
-account 地址自定义名称 */
-func (*BtcService) AddAddressToWallet(pubKey, accountIn string) (accountOut string, err error) {
-	//验证地址是否已存在
-	err = btcSrv.CheckAddressExists(pubKey)
-	if err != nil {
-		return
-	}
-	address, _ := btcutil.DecodeAddress(pubKey, &chaincfg.RegressionNetParams)
-	if err = btcSrv.client.ImportAddress(address.EncodeAddress()); err != nil {
-		return
-	}
-	//修改名字 忽略错误
-	if btcSrv.client.SetAccount(address, accountIn) != nil {
-		return
-	}
-	return accountIn, nil
 }
 
 /* 验证publickey对应的地址是否已存在于链中
@@ -136,44 +85,14 @@ func (*BtcService) CheckAddressExists(pubKey string) error {
 	return nil
 }
 
-/*
-*获取所有account
- */
-func (*BtcService) GetAccounts() (accounts []*Account, err error) {
-	accs, err := btcSrv.client.ListAccounts()
-	if err != nil {
-		return
-	}
-	for k, v := range accs {
-		accounts = append(accounts, &Account{
-			Amount: v.ToBTC(),
-			Name:   k,
-			Unit:   "BTC",
-		})
-	}
-	return accounts, nil
-}
+//获取账户余额
 func (*BtcService) GetBalanceInAddress(address string) (balance float64, err error) {
-	unspents, err := btcSrv.GetUnspentByAddress(address)
+	unspents, err := getUnspentByAddress(address)
 	if err != nil {
 		return
 	}
 	for _, v := range unspents {
 		balance += v.Amount
-	}
-	return
-}
-
-//根据address获取未花费的tx
-func (*BtcService) GetUnspentByAddress(address string) (unspents []btcjson.ListUnspentResult, err error) {
-	btcAdd, err := btcutil.DecodeAddress(address, &chaincfg.RegressionNetParams)
-	if err != nil {
-		return
-	}
-	adds := [1]btcutil.Address{btcAdd}
-	unspents, err = btcSrv.client.ListUnspentMinMaxAddresses(1, 999999, adds[:])
-	if err != nil {
-		return
 	}
 	return
 }
@@ -190,7 +109,7 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 	}
 	//----------------------------------------END-----------
 
-	unspents, err := btcSrv.GetUnspentByAddress(addrFrom)
+	unspents, err := getUnspentByAddress(addrFrom)
 	if err != nil {
 		return
 	}
@@ -272,26 +191,6 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 	return txHash.String(), nil
 }
 
-//这个方法ListAddressTransactions method not found;btcd NOTE: This is a btcwallet extension.
-func (*BtcService) GetTxByAddress(addrs []string, name string) (interface{}, error) {
-	ct := len(addrs)
-	addresses := make([]btcutil.Address, 0, ct)
-	for _, v := range addrs {
-		address, err := btcutil.DecodeAddress(v, &chaincfg.RegressionNetParams)
-		if err != nil {
-			log.Println("一个废物")
-		} else {
-			addresses = append(addresses, address)
-		}
-	}
-
-	txs, err := btcSrv.client.ListAddressTransactions(addresses, name)
-	if err != nil {
-		return nil, err
-	}
-	return txs, nil
-}
-
 //验证交易是否被公链证实
 //txid:交易id
 func (*BtcService) CheckTxMergerStatus(txId string) error {
@@ -308,6 +207,76 @@ func (*BtcService) CheckTxMergerStatus(txId string) error {
 		return errors.ERR_UNCONFIRMED
 	}
 	return nil
+}
+
+/////////////////////////////////////////全局接口///////END////////////////////////////////////////
+
+/////////////////////////////////////////内部方法///////START////////////////////////////////////////
+
+//根据address获取未花费的tx
+func getUnspentByAddress(address string) (unspents []btcjson.ListUnspentResult, err error) {
+	btcAdd, err := btcutil.DecodeAddress(address, &chaincfg.RegressionNetParams)
+	if err != nil {
+		return
+	}
+	adds := [1]btcutil.Address{btcAdd}
+	unspents, err = btcSrv.client.ListUnspentMinMaxAddresses(1, 999999, adds[:])
+	if err != nil {
+		return
+	}
+	return
+}
+
+/* 导入privatekey,这个导入能在coin.core上直接listaccounts查看到，因为有私钥了 */
+func addPrvkeyToWallet(prvkey, accoutIn string) (accountOut string, err error) {
+	wif, err := btcutil.DecodeWIF(prvkey)
+	if err != nil {
+		return
+	}
+	if err = btcSrv.client.ImportPrivKeyLabel(wif, accoutIn); err != nil {
+		return
+	}
+	return accoutIn, nil
+}
+
+/* 将publickey对应的address添加到链中，
+pubKey 公钥
+account 地址自定义名称 */
+func addPubkeyToWallet(pubKey, accountIn string) (accountOut string, err error) {
+	//验证地址是否已存在
+	err = btcSrv.CheckAddressExists(pubKey)
+	if err != nil {
+		return
+	}
+	if err = btcSrv.client.ImportPubKey(pubKey); err != nil {
+		return
+	}
+	address, _ := btcutil.DecodeAddress(pubKey, &chaincfg.RegressionNetParams)
+	//修改名字 忽略错误
+	if err = btcSrv.client.SetAccount(address, accountIn); err != nil {
+		return
+	}
+	return accountIn, nil
+}
+
+/* 将publickey对应的address添加到链中，
+pubKey 公钥
+account 地址自定义名称 */
+func addAddressToWallet(pubKey, accountIn string) (accountOut string, err error) {
+	//验证地址是否已存在
+	err = btcSrv.CheckAddressExists(pubKey)
+	if err != nil {
+		return
+	}
+	address, _ := btcutil.DecodeAddress(pubKey, &chaincfg.RegressionNetParams)
+	if err = btcSrv.client.ImportAddress(address.EncodeAddress()); err != nil {
+		return
+	}
+	//修改名字 忽略错误
+	if btcSrv.client.SetAccount(address, accountIn) != nil {
+		return
+	}
+	return accountIn, nil
 }
 
 //签名
@@ -360,4 +329,44 @@ func mkGetKey(keys map[string]addressToKey) txscript.KeyDB {
 type addressToKey struct {
 	key        *btcec.PrivateKey
 	compressed bool
+}
+
+/////////////////////////////////////////内部方法///////end////////////////////////////////////////
+////////////////////////其他方法////////////////////////////////////////
+/*
+*获取所有account
+ */
+func (*BtcService) GetAccounts() (accounts []*Account, err error) {
+	accs, err := btcSrv.client.ListAccounts()
+	if err != nil {
+		return
+	}
+	for k, v := range accs {
+		accounts = append(accounts, &Account{
+			Amount: v.ToBTC(),
+			Name:   k,
+			Unit:   "BTC",
+		})
+	}
+	return accounts, nil
+}
+
+//这个方法ListAddressTransactions method not found;btcd NOTE: This is a btcwallet extension.
+func (*BtcService) GetTxByAddress(addrs []string, name string) (interface{}, error) {
+	ct := len(addrs)
+	addresses := make([]btcutil.Address, 0, ct)
+	for _, v := range addrs {
+		address, err := btcutil.DecodeAddress(v, &chaincfg.RegressionNetParams)
+		if err != nil {
+			log.Println("一个废物")
+		} else {
+			addresses = append(addresses, address)
+		}
+	}
+
+	txs, err := btcSrv.client.ListAddressTransactions(addresses, name)
+	if err != nil {
+		return nil, err
+	}
+	return txs, nil
 }

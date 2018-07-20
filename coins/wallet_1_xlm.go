@@ -12,7 +12,6 @@ import (
 	"blockchainDemo/errors"
 
 	"encoding/json"
-
 	"github.com/stellar/go/build"
 	"github.com/stellar/go/clients/horizon"
 )
@@ -195,6 +194,18 @@ func (*XlmService) CheckTxMergerStatus(txId string) error {
 	return nil
 }
 
+//获取所有账户信息
+func (*XlmService) CheckAddressExists(address string) error {
+
+	account, err := horizon.DefaultTestNetClient.LoadAccount(address)
+	if err != nil {
+		return err
+	}
+	js, err := json.Marshal(account)
+	fmt.Println(string(js))
+	return nil
+}
+
 //查询当前地址最近一笔交易情况
 //获取时间较长，暂时未知返回总是： only expected 1 event, got: 0
 //这个方法因为响应时间问题，如果要对接最好限流
@@ -227,17 +238,6 @@ func (*XlmService) GetPaymentsNow(address string) error {
 	return nil
 }
 
-//获取所有账户信息
-func (*XlmService) CheckAddressExists(address string) error {
-
-	account, err := horizon.DefaultTestNetClient.LoadAccount(address)
-	if err != nil {
-		return err
-	}
-	js, err := json.Marshal(account)
-	fmt.Println(string(js))
-	return nil
-}
 func (*XlmService) GetAllApi(address string) error {
 	hd, err := horizon.DefaultTestNetClient.HomeDomainForAccount(address)
 	fmt.Println(hd, err)
@@ -301,6 +301,16 @@ func checkBalanceEnough(sourceAddress string, comparedAmount float64) error {
 	return nil
 }
 
+//获取账户序列数
+func sequenceForAccount(account string) error {
+	num, err := horizon.DefaultTestNetClient.SequenceForAccount(account)
+	if err != nil {
+		return err
+	}
+	fmt.Println(num)
+	return nil
+}
+
 /////////////////////////////////////////////////////just for test///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func (*XlmService) Other() {
@@ -310,14 +320,4 @@ func (*XlmService) Other() {
 	fmt.Println(offerset, err)
 	horizon.DefaultTestNetClient.LoadOperation("")
 
-}
-
-//获取账户序列数
-func (*XlmService) SequenceForAccount(account string) error {
-	num, err := horizon.DefaultTestNetClient.SequenceForAccount(account)
-	if err != nil {
-		return err
-	}
-	fmt.Println(num)
-	return nil
 }

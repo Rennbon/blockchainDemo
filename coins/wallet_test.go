@@ -19,14 +19,6 @@ SendAddressToAddress(addrFrom, addrTo string, transfer, fee float64) (txId strin
 CheckTxStatus(string) error
 CheckAddressExists(string) error
 
-//全局测试代码相关
-handler.LoadService(btc)
-switch handler.TypeName {
-	case "*coins.BtcService":
-		break
-case "*coins.XlmService":
-		break
-}
 */
 
 //获取新地址，同事数据库会存储key以便调试
@@ -50,6 +42,7 @@ func TestGetNewAddress(t *testing.T) {
 	fmt.Printf("address:%s\n\raccount:%s\n\r", address, account)
 }
 
+//测试获取账户余额
 func TestGetBalanceInAddress(t *testing.T) {
 	handler.LoadService(btc)
 	var (
@@ -71,6 +64,7 @@ func TestGetBalanceInAddress(t *testing.T) {
 	fmt.Println(bal)
 }
 
+//测试账号到账号
 func TestSendAddressToAddress(t *testing.T) {
 	handler.LoadService(btc)
 	var (
@@ -91,6 +85,8 @@ func TestSendAddressToAddress(t *testing.T) {
 	}
 	fmt.Println(txId)
 }
+
+//测试交易状态
 func TestCheckTxMergerStatus(t *testing.T) {
 	handler.LoadService(btc)
 	var (
@@ -109,6 +105,7 @@ func TestCheckTxMergerStatus(t *testing.T) {
 	}
 }
 
+//测试账号是否存在
 func TestCheckAddressExists(t *testing.T) {
 	handler.LoadService(xlm)
 	var (
@@ -126,6 +123,8 @@ func TestCheckAddressExists(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+//测试用例模板
 func Test(t *testing.T) {
 	handler.LoadService(btc)
 	switch handler.TypeName {
