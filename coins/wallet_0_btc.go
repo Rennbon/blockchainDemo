@@ -2,12 +2,11 @@ package coins
 
 import (
 	"blockchainDemo/cert"
+	"blockchainDemo/database"
 	"blockchainDemo/errors"
 	"encoding/hex"
 	"fmt"
 	"log"
-
-	"blockchainDemo/database"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/btcjson"
