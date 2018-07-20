@@ -54,9 +54,9 @@ func initBtcClinet(conf *config.BtcConf) {
 }
 
 var (
-	certSrv   cert.BtcCertService
+	certSrv cert.BtcCertService
+	//环境变量
 	btcClient *rpcclient.Client
-	btcSrv    BtcService
 	btcEnv    *chaincfg.Params
 )
 
@@ -97,15 +97,7 @@ func (*BtcService) GetNewAddress(account string, mode AcountRunMode) (address, a
 /* 验证publickey对应的地址是否已存在于链中
 pubkey 公钥 */
 func (*BtcService) CheckAddressExists(pubKey string) error {
-	address, err := btcutil.DecodeAddress(pubKey, btcEnv)
-	addrValid, err := btcClient.ValidateAddress(address)
-	if err != nil {
-		return err
-	}
-	if addrValid.IsWatchOnly {
-		return errors.ERR_DATA_EXISTS
-	}
-	return nil
+	return checkAddressExists(pubKey)
 }
 
 //获取账户余额
@@ -235,6 +227,19 @@ func (*BtcService) CheckTxMergerStatus(txId string) error {
 /////////////////////////////////////////全局接口///////END////////////////////////////////////////
 
 /////////////////////////////////////////内部方法///////START////////////////////////////////////////
+/* 验证publickey对应的地址是否已存在于链中
+pubkey 公钥 */
+func checkAddressExists(pubKey string) error {
+	address, err := btcutil.DecodeAddress(pubKey, btcEnv)
+	addrValid, err := btcClient.ValidateAddress(address)
+	if err != nil {
+		return err
+	}
+	if addrValid.IsWatchOnly {
+		return errors.ERR_DATA_EXISTS
+	}
+	return nil
+}
 
 //根据address获取未花费的tx
 func getUnspentByAddress(address string) (unspents []btcjson.ListUnspentResult, err error) {
@@ -267,7 +272,7 @@ pubKey 公钥
 account 地址自定义名称 */
 func addPubkeyToWallet(pubKey, accountIn string) (accountOut string, err error) {
 	//验证地址是否已存在
-	err = btcSrv.CheckAddressExists(pubKey)
+	err = checkAddressExists(pubKey)
 	if err != nil {
 		return
 	}
@@ -287,7 +292,7 @@ pubKey 公钥
 account 地址自定义名称 */
 func addAddressToWallet(pubKey, accountIn string) (accountOut string, err error) {
 	//验证地址是否已存在
-	err = btcSrv.CheckAddressExists(pubKey)
+	err = checkAddressExists(pubKey)
 	if err != nil {
 		return
 	}

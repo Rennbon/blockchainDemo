@@ -44,14 +44,14 @@ func initXlmClinet(conf *config.XlmConf) {
 }
 
 var (
-	certXlmSrv    cert.XlmCertService
-	xlmSrv        XlmService
-	client        *horizon.Client
-	netWork       build.Network
+	certXlmSrv cert.XlmCertService
+	//环境变量
+	client  *horizon.Client
+	netWork build.Network
+	//xlm固定值
 	baseReserve   float64 = 0.5    //账户保证金基数
 	baseFee       float64 = 0.0001 //小费基数（单位:xlm）
 	baseFeeLemuns uint64  = 100    //小费 (单位：lumens)
-
 )
 
 //////////////////////////////////////////////////////
@@ -317,7 +317,7 @@ func (*XlmService) ClearAccount(from, to string) (err error) {
 //sourceAddress 付款地址
 //comparedAmount 目标金额
 func checkBalanceEnough(sourceAddress string, comparedAmount float64) error {
-	balance, err := xlmSrv.GetBalanceInAddress(sourceAddress)
+	balance, err := getBalanceInAddress(sourceAddress)
 	if err != nil {
 		return err
 	}
@@ -335,6 +335,22 @@ func sequenceForAccount(account string) error {
 	}
 	fmt.Println(num)
 	return nil
+}
+func getBalanceInAddress(address string) (balance float64, err error) {
+	account, err := client.LoadAccount(address)
+	if err != nil {
+		return 0, err
+	}
+	bls := float64(0)
+	for _, v := range account.Balances {
+		fmt.Println(v.Balance)
+		curBls, err := strconv.ParseFloat(v.Balance, 64)
+		if err != nil {
+			return 0, err
+		}
+		bls += curBls
+	}
+	return bls, nil
 }
 
 /////////////////////////////////////////////////////just for test///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
