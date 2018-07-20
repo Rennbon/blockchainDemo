@@ -17,6 +17,7 @@ GetNewAddress(string, AcountRunMode) (address, accountOut string, err error)
 GetBalanceInAddress(string) (balance float64, err error)
 SendAddressToAddress(addrFrom, addrTo string, transfer, fee float64) (txId string, err error)
 CheckTxStatus(string) error
+CheckAddressExists(string) error
 
 //全局测试代码相关
 handler.LoadService(btc)
@@ -89,4 +90,48 @@ func TestSendAddressToAddress(t *testing.T) {
 		t.Error(err)
 	}
 	fmt.Println(txId)
+}
+func TestCheckTxMergerStatus(t *testing.T) {
+	handler.LoadService(btc)
+	var (
+		err error
+	)
+	switch handler.TypeName {
+	case "*coins.BtcService":
+		err = handler.CheckTxMergerStatus("7f11a56ce356281ff5244ae57804da370c3cb0b685367088d10bf67be0a93f59")
+		break
+	case "*coins.XlmService":
+		err = handler.CheckTxMergerStatus("5b410a62000da9d16fbffdc0b799b219599d6a303cadc6a00db821788f44c53e")
+		break
+	}
+	if err != nil {
+		t.Error(err)
+	}
+}
+
+func TestCheckAddressExists(t *testing.T) {
+	handler.LoadService(xlm)
+	var (
+		err error
+	)
+	switch handler.TypeName {
+	case "*coins.BtcService":
+		err = handler.CheckAddressExists("046c9bbd1c67db7a99bb45a98c592ec89bffe65174ddd130395d632cb428f7423c3cc4de7d623bc4da321451ddede0e39e8bec0105103268e609cb175ea2fedf91")
+		break
+	case "*coins.XlmService":
+		err = handler.CheckAddressExists("GD43TZONCLLNDHA5ALVRWZKMATTOKNLLTH3XTAJN6SQK77Q3ZT44QJJV")
+		break
+	}
+	if err != nil {
+		t.Error(err)
+	}
+}
+func Test(t *testing.T) {
+	handler.LoadService(btc)
+	switch handler.TypeName {
+	case "*coins.BtcService":
+		break
+	case "*coins.XlmService":
+		break
+	}
 }

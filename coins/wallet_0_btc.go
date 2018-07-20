@@ -87,13 +87,14 @@ pubKey 公钥
 account 地址自定义名称 */
 func (*BtcService) AddPubkeyToWallet(pubKey, accountIn string) (accountOut string, err error) {
 	//验证地址是否已存在
-	address, err := btcSrv.CheckAddressExisted(pubKey)
+	err = btcSrv.CheckAddressExists(pubKey)
 	if err != nil {
 		return
 	}
 	if err = btcSrv.client.ImportPubKey(pubKey); err != nil {
 		return
 	}
+	address, _ := btcutil.DecodeAddress(pubKey, &chaincfg.RegressionNetParams)
 	//修改名字 忽略错误
 	if err = btcSrv.client.SetAccount(address, accountIn); err != nil {
 		return
@@ -106,10 +107,11 @@ pubKey 公钥
 account 地址自定义名称 */
 func (*BtcService) AddAddressToWallet(pubKey, accountIn string) (accountOut string, err error) {
 	//验证地址是否已存在
-	address, err := btcSrv.CheckAddressExisted(pubKey)
+	err = btcSrv.CheckAddressExists(pubKey)
 	if err != nil {
 		return
 	}
+	address, _ := btcutil.DecodeAddress(pubKey, &chaincfg.RegressionNetParams)
 	if err = btcSrv.client.ImportAddress(address.EncodeAddress()); err != nil {
 		return
 	}
@@ -122,16 +124,16 @@ func (*BtcService) AddAddressToWallet(pubKey, accountIn string) (accountOut stri
 
 /* 验证publickey对应的地址是否已存在于链中
 pubkey 公钥 */
-func (*BtcService) CheckAddressExisted(pubKey string) (btcutil.Address, error) {
+func (*BtcService) CheckAddressExists(pubKey string) error {
 	address, err := btcutil.DecodeAddress(pubKey, &chaincfg.RegressionNetParams)
 	addrValid, err := btcSrv.client.ValidateAddress(address)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if addrValid.IsWatchOnly {
-		return address, errors.ERR_DATA_EXISTS
+		return errors.ERR_DATA_EXISTS
 	}
-	return address, nil
+	return nil
 }
 
 /*

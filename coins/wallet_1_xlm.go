@@ -187,9 +187,12 @@ func (*XlmService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 	return resp.Hash, nil
 }
 
-func (*XlmService) GetTxByAddress1(txId string) (tx horizon.Transaction, err error) {
-	tx, err = horizon.DefaultTestNetClient.LoadTransaction(txId)
-	return
+func (*XlmService) CheckTxMergerStatus(txId string) error {
+	_, err := horizon.DefaultTestNetClient.LoadTransaction(txId)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 //查询当前地址最近一笔交易情况
@@ -225,7 +228,7 @@ func (*XlmService) GetPaymentsNow(address string) error {
 }
 
 //获取所有账户信息
-func (*XlmService) GetAccount(address string) error {
+func (*XlmService) CheckAddressExists(address string) error {
 
 	account, err := horizon.DefaultTestNetClient.LoadAccount(address)
 	if err != nil {
