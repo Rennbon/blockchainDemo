@@ -3,9 +3,7 @@ package coins
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"testing"
-	"time"
 )
 
 var btc BtcService
@@ -34,13 +32,13 @@ func TestCheckAddressExisted(t *testing.T) {
 }
 
 //获取新地址，同事数据库会存储key以便调试
-func TestGetNewAddress(t *testing.T) {
+/*func TestGetNewAddress(t *testing.T) {
 	address, account, err := btc.GetNewAddress("Test"+strconv.FormatInt(time.Now().Unix(), 10), AddrMode)
 	if err != nil {
 		t.Error(err)
 	}
 	fmt.Printf("address:%s\n\raccount:%s\n\r", address, account)
-}
+}*/
 
 func TestGetBalanceInAddress(t *testing.T) {
 	balance, err := btc.GetBalanceInAddress("ms8d4chAKH9CjTY57HNymFSLZNUkZXFnVY")
@@ -63,12 +61,12 @@ func TestGetUnspentByAddress(t *testing.T) {
 	}
 }
 
-func TestSendAddressToAddress(t *testing.T) {
+/*func TestSendAddressToAddress(t *testing.T) {
 	err := btc.SendAddressToAddress("n4UYCTwXvJ7ijCC9ERGr7qYAuJbiLjUcwT", "mvY3JLZNZrvRewbgMZwvj9CHUJWtQeZjff", 10, 0.0001)
 	if err != nil {
 		t.Error(err)
 	}
-}
+}*/
 
 func TestGetTxByAddress(t *testing.T) {
 	txs, err := btc.GetTxByAddress([]string{"2NBpzw8BLKhES9MyM7gt7Crp1PWckFvsYFn"}, "")

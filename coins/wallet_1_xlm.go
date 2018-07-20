@@ -12,6 +12,7 @@ import (
 	"blockchainDemo/errors"
 
 	"encoding/json"
+
 	"github.com/stellar/go/build"
 	"github.com/stellar/go/clients/horizon"
 )
@@ -106,7 +107,7 @@ func (*XlmService) GetNewAddress(account string, mode AcountRunMode) (address, a
 	}
 	return key.Address, account, nil
 }
-func (*XlmService) GetBalanceInAddress1(address string) (balance float64, err error) {
+func (*XlmService) GetBalanceInAddress(address string) (balance float64, err error) {
 	account, err := horizon.DefaultTestNetClient.LoadAccount(address)
 	if err != nil {
 		return 0, err
@@ -127,16 +128,16 @@ func (*XlmService) GetBalanceInAddress1(address string) (balance float64, err er
 //addrForm来源地址，addrTo去向地址
 //transfer 转账金额
 //fee 小费
-func (*XlmService) SendAddressToAddress1(addrFrom, addrTo string, transfer, fee float64) error {
+func (*XlmService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee float64) (txId string, err error) {
 	//数据库获取prv pub key等信息，便于调试--------START------
 	actf, err := dhSrv.GetAccountByAddress(addrFrom)
 	if err != nil {
-		return err
+		return
 	}
 	//----------------------------------------END-----------
 	//验证地址是否有效
-	if _, err := horizon.DefaultTestNetClient.LoadAccount(addrTo); err != nil {
-		return nil
+	if _, err = horizon.DefaultTestNetClient.LoadAccount(addrTo); err != nil {
+		return
 	}
 	//100 stroops (0.00001 XLM).
 	//The base fee (currently 100 stroops) is used in transaction fees.
@@ -147,7 +148,7 @@ func (*XlmService) SendAddressToAddress1(addrFrom, addrTo string, transfer, fee 
 	//验证金额总数
 	comparedAmount := transfer + baseFee + baseReserve*2*2
 	if err = checkBalanceEnough(addrFrom, comparedAmount); err != nil {
-		return err
+		return
 	}
 	//小费是自己扣的，不需要这边实现，金额总数也不需要验证，当然可以验证
 	tx, err := build.Transaction(
@@ -163,27 +164,27 @@ func (*XlmService) SendAddressToAddress1(addrFrom, addrTo string, transfer, fee 
 	)
 
 	if err != nil {
-		return err
+		return
 	}
 	// Sign the transaction to prove you are actually the person sending it.
 	txe, err := tx.Sign(actf.Seed) //签名需要用seed
 	if err != nil {
-		return err
+		return
 	}
 
 	txeB64, err := txe.Base64()
 	if err != nil {
-		return err
+		return
 	}
 
 	// And finally, send it off to Stellar!
 	resp, err := horizon.DefaultTestNetClient.SubmitTransaction(txeB64) //提交tx
 	if err != nil {
-		return err
+		return
 	}
 	//存储到数据库，方便检验
 	dhSrv.AddTx(resp.Hash, addrFrom, []string{addrTo})
-	return nil
+	return resp.Hash, nil
 }
 
 func (*XlmService) GetTxByAddress1(txId string) (tx horizon.Transaction, err error) {
@@ -287,7 +288,7 @@ func (*XlmService) ClearAccount(from, to string) (err error) {
 //sourceAddress 付款地址
 //comparedAmount 目标金额
 func checkBalanceEnough(sourceAddress string, comparedAmount float64) error {
-	balance, err := xlmSrv.GetBalanceInAddress1(sourceAddress)
+	balance, err := xlmSrv.GetBalanceInAddress(sourceAddress)
 	if err != nil {
 		return err
 	}

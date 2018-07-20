@@ -8,6 +8,7 @@ import (
 	"log"
 
 	"blockchainDemo/database"
+
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -180,17 +181,17 @@ func (*BtcService) GetUnspentByAddress(address string) (unspents []btcjson.ListU
 //addrForm来源地址，addrTo去向地址
 //transfer 转账金额
 //fee 小费
-func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee float64) error {
+func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee float64) (txId string, err error) {
 	//数据库获取prv pub key等信息，便于调试--------START------
 	actf, err := dhSrv.GetAccountByAddress(addrFrom)
 	if err != nil {
-		return err
+		return
 	}
 	//----------------------------------------END-----------
 
 	unspents, err := btcSrv.GetUnspentByAddress(addrFrom)
 	if err != nil {
-		return err
+		return
 	}
 	//各种参数声明 可以构建为内部小对象
 	outsu := float64(0)                 //unspent单子相加
@@ -214,9 +215,10 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 				tx.AddTxIn(txIn)
 
 				//设置签名用script
-				txinPkScript, err := hex.DecodeString(v.ScriptPubKey)
-				if err != nil {
-					return err
+				txinPkScript, errInner := hex.DecodeString(v.ScriptPubKey)
+				if errInner != nil {
+					err = errInner
+					return
 				}
 				pkscripts = append(pkscripts, txinPkScript)
 			}
@@ -226,46 +228,47 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 	}
 	//家里穷钱不够
 	if outsu < totalTran {
-		return errors.ERR_NOT_ENOUGH_COIN
+		err = errors.ERR_NOT_ENOUGH_COIN
+		return
 	}
 	// 输出1, 给form----------------找零-------------------
 	addrf, err := btcutil.DecodeAddress(addrFrom, &chaincfg.RegressionNetParams)
 	if err != nil {
-		return err
+		return
 	}
 	pkScriptf, err := txscript.PayToAddrScript(addrf)
 	if err != nil {
-		return err
+		return
 	}
 	baf := int64((outsu - totalTran) * 1e8)
 	tx.AddTxOut(wire.NewTxOut(baf, pkScriptf))
 	//输出2，给to------------------付钱-----------------
 	addrt, err := btcutil.DecodeAddress(addrTo, &chaincfg.RegressionNetParams)
 	if err != nil {
-		return err
+		return
 	}
 	pkScriptt, err := txscript.PayToAddrScript(addrt)
 	if err != nil {
-		return err
+		return
 	}
 	bat := int64(transfer * 1e8)
 	tx.AddTxOut(wire.NewTxOut(bat, pkScriptt))
 	//-------------------输出填充end------------------------------
 	err = sign(tx, actf.PrvKey, pkscripts) //签名
 	if err != nil {
-		return err
+		return
 	}
 	//广播
 	txHash, err := btcSrv.client.SendRawTransaction(tx, false)
 	if err != nil {
-		return err
+		return
 	}
 	//这里最好也记一下当前的block count,以便监听block count比此时高度
 	//大6的时候去获取当前TX是否在公链有效
 	dhSrv.AddTx(txHash.String(), addrFrom, []string{addrFrom, addrTo})
 	fmt.Println("Transaction successfully signed")
 	fmt.Println(txHash.String())
-	return nil
+	return txHash.String(), nil
 }
 
 //这个方法ListAddressTransactions method not found;btcd NOTE: This is a btcwallet extension.

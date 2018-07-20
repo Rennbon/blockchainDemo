@@ -8,22 +8,22 @@ import (
 
 var xlm XlmService
 
-func TestGetNewAddress1(t *testing.T) {
+/*func TestGetNewAddress1(t *testing.T) {
 	address, account, err := xlm.GetNewAddress1("", AddrMode)
 	if err != nil {
 		t.Error(err)
 	}
 	fmt.Printf("address:%s\n\raccount:%s\n\r", address, account)
-}
-func TestGetBalanceInAddress1(t *testing.T) {
+}*/
+/*func TestGetBalanceInAddress1(t *testing.T) {
 	balance, err := xlm.GetBalanceInAddress1("GD43TZONCLLNDHA5ALVRWZKMATTOKNLLTH3XTAJN6SQK77Q3ZT44QJJV")
 	if err != nil {
 		t.Error(err)
 	}
 	fmt.Println(balance)
 }
-
-func TestSendAddressToAddress1(t *testing.T) {
+*/
+/*func TestSendAddressToAddress1(t *testing.T) {
 
 	err := xlm.SendAddressToAddress1(
 		"GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX",
@@ -34,7 +34,7 @@ func TestSendAddressToAddress1(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-}
+}*/
 func TestGetPaymentsNow(t *testing.T) {
 	err := xlm.GetPaymentsNow("GD43TZONCLLNDHA5ALVRWZKMATTOKNLLTH3XTAJN6SQK77Q3ZT44QJJV")
 	if err != nil {

@@ -21,7 +21,7 @@ type Coiner interface {
 	GetNewAddress(string, AcountRunMode) (address, accountOut string, err error)
 	GetBalanceInAddress(string) (balance float64, err error)
 	SendAddressToAddress(addrFrom, addrTo string, transfer, fee float64) (txId string, err error)
-	CheckTxStatus(string) error
+	//CheckTxStatus(string) error
 }
 
 type CoinHandler struct {
