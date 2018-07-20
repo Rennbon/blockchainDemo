@@ -66,7 +66,8 @@ func TestGetBalanceInAddress(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Println(balance)
+	bal := strconv.FormatFloat(balance, 'f', 8, 64)
+	fmt.Println(bal)
 }
 
 func TestSendAddressToAddress(t *testing.T) {

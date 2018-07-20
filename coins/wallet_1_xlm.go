@@ -73,7 +73,7 @@ func (*XlmService) GetNewAddress(account string, mode AcountRunMode) (address, a
 		Data entries
 	*/
 	amount := baseReserve * 2 //基础+Singer=2条
-	amountStr := strconv.FormatFloat(amount, 'f', 6, 64)
+	amountStr := strconv.FormatFloat(amount, 'f', 8, 64)
 	tx, err := build.Transaction(
 		build.TestNetwork,
 		build.Sequence{uint64(num) + 1}, //这里用autoSequence 失败了，公链可以在尝试下
@@ -144,7 +144,7 @@ func (*XlmService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 	//sumfee = num of operations × base fee
 	//The base reserve (currently 0.5 XLM) is used in minimum account balances.
 	//(2 + n) × base reserve = 2.5 XLM.
-	amount := strconv.FormatFloat(transfer, 'f', 6, 64)
+	amount := strconv.FormatFloat(transfer, 'f', 8, 64)
 	//验证金额总数
 	comparedAmount := transfer + baseFee + baseReserve*2*2
 	if err = checkBalanceEnough(addrFrom, comparedAmount); err != nil {

@@ -44,10 +44,10 @@ func initBtcClinet() {
 func (*BtcService) GetNewAddress(account string, mode AcountRunMode) (address, accountOut string, err error) {
 	key, err := certSrv.GenerateSimpleKey()
 	if err != nil {
-		return "", "", err
+		return
 	}
 	if err = dhSrv.AddAccount(account, key.PrivKey, key.PubKey, key.Address, key.Seed, database.BTC); err != nil {
-		return "", "", err
+		return
 	}
 	switch mode {
 	case NoneMode:
@@ -65,7 +65,7 @@ func (*BtcService) GetNewAddress(account string, mode AcountRunMode) (address, a
 		break
 	}
 	if err != nil {
-		return "", "", nil
+		return
 	}
 	return key.Address, account, nil
 }
@@ -74,10 +74,10 @@ func (*BtcService) GetNewAddress(account string, mode AcountRunMode) (address, a
 func (*BtcService) AddPrvkeyToWallet(prvkey, accoutIn string) (accountOut string, err error) {
 	wif, err := btcutil.DecodeWIF(prvkey)
 	if err != nil {
-		return "", err
+		return
 	}
 	if err = btcSrv.client.ImportPrivKeyLabel(wif, accoutIn); err != nil {
-		return "", err
+		return
 	}
 	return accoutIn, nil
 }
@@ -89,14 +89,14 @@ func (*BtcService) AddPubkeyToWallet(pubKey, accountIn string) (accountOut strin
 	//验证地址是否已存在
 	address, err := btcSrv.CheckAddressExisted(pubKey)
 	if err != nil {
-		return "", err
+		return
 	}
 	if err = btcSrv.client.ImportPubKey(pubKey); err != nil {
-		return "", err
+		return
 	}
 	//修改名字 忽略错误
 	if err = btcSrv.client.SetAccount(address, accountIn); err != nil {
-		return "", nil
+		return
 	}
 	return accountIn, nil
 }
@@ -108,14 +108,14 @@ func (*BtcService) AddAddressToWallet(pubKey, accountIn string) (accountOut stri
 	//验证地址是否已存在
 	address, err := btcSrv.CheckAddressExisted(pubKey)
 	if err != nil {
-		return "", err
+		return
 	}
 	if err = btcSrv.client.ImportAddress(address.EncodeAddress()); err != nil {
-		return "", err
+		return
 	}
 	//修改名字 忽略错误
 	if btcSrv.client.SetAccount(address, accountIn) != nil {
-		return "", nil
+		return
 	}
 	return accountIn, nil
 }
@@ -140,7 +140,7 @@ func (*BtcService) CheckAddressExisted(pubKey string) (btcutil.Address, error) {
 func (*BtcService) GetAccounts() (accounts []*Account, err error) {
 	accs, err := btcSrv.client.ListAccounts()
 	if err != nil {
-		return nil, err
+		return
 	}
 	for k, v := range accs {
 		accounts = append(accounts, &Account{
@@ -152,27 +152,26 @@ func (*BtcService) GetAccounts() (accounts []*Account, err error) {
 	return accounts, nil
 }
 func (*BtcService) GetBalanceInAddress(address string) (balance float64, err error) {
-	addr, err := btcutil.DecodeAddress(address, &chaincfg.RegressionNetParams)
+	unspents, err := btcSrv.GetUnspentByAddress(address)
 	if err != nil {
-		return 0, err
+		return
 	}
-	bal, err := btcSrv.client.GetReceivedByAddress(addr)
-	if err != nil {
-		return 0, err
+	for _, v := range unspents {
+		balance += v.Amount
 	}
-	return bal.ToBTC(), nil
+	return
 }
 
 //根据address获取未花费的tx
 func (*BtcService) GetUnspentByAddress(address string) (unspents []btcjson.ListUnspentResult, err error) {
 	btcAdd, err := btcutil.DecodeAddress(address, &chaincfg.RegressionNetParams)
 	if err != nil {
-		return nil, err
+		return
 	}
 	adds := [1]btcutil.Address{btcAdd}
 	unspents, err = btcSrv.client.ListUnspentMinMaxAddresses(1, 999999, adds[:])
 	if err != nil {
-		return nil, err
+		return
 	}
 	return
 }
