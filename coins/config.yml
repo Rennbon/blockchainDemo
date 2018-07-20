@@ -3,8 +3,11 @@ btcconf:
   port: "8332"      
   user: "Rennbon"  
   passwd: "qwe123456"
+  env: 3
 mongo:
   addr: "localhost:27017"
   timeout: 500
   poolLimit: 500
   database: "blockChain"
+xlmconf:
+  env: 3

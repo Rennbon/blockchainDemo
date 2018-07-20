@@ -3,32 +3,28 @@ package coins
 import (
 	"blockchainDemo/config"
 	"log"
-
-	"github.com/btcsuite/btcd/rpcclient"
 )
 
-var keys []string = []string{"BtcConf"}
-var btcConn *rpcclient.ConnConfig
+var (
+	//验证基础配置是否有效
+	keys = []string{"BtcConf"}
+	conf *config.Config
+)
 
 func init() {
 	initConfig()
-	initBtcClinet()
+	initBtcClinet(&conf.BtcConf)
+	initXlmClinet(&conf.XlmConf)
 }
 func initConfig() {
-	conf, err := config.LoadConfig()
+	conftemp, err := config.LoadConfig()
 	if err != nil {
 		panic("wallet init LoadConfig panic.")
 	}
-	err = config.CheckConfig(conf, keys)
+	err = config.CheckConfig(conftemp, keys)
 	if err != nil {
 		panic("wallet init CheckConfig panic.")
 	}
-	btcConn = &rpcclient.ConnConfig{
-		Host:         conf.BtcConf.IP + ":" + conf.BtcConf.Port,
-		User:         conf.BtcConf.User,
-		Pass:         conf.BtcConf.Passwd,
-		HTTPPostMode: true,
-		DisableTLS:   true,
-	}
+	conf = conftemp
 	log.Println("coins=>conn=>initConfig sccuess.")
 }

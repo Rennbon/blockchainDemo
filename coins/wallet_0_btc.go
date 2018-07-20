@@ -2,6 +2,7 @@ package coins
 
 import (
 	"blockchainDemo/cert"
+	"blockchainDemo/config"
 	"blockchainDemo/database"
 	"blockchainDemo/errors"
 	"encoding/hex"
@@ -22,19 +23,42 @@ type BtcService struct {
 	client *rpcclient.Client
 }
 
-var (
-	certSrv cert.BtcCertService
-	btcSrv  BtcService
-)
-
-func initBtcClinet() {
+//装载btc配置
+func initBtcClinet(conf *config.BtcConf) {
+	btcConn := &rpcclient.ConnConfig{
+		Host:         conf.IP + ":" + conf.Port,
+		User:         conf.User,
+		Pass:         conf.Passwd,
+		HTTPPostMode: true,
+		DisableTLS:   true,
+	}
 	cli, err := rpcclient.New(btcConn, nil)
 	if err != nil {
 		panic("btc rpcclient error.")
 	}
 	btcSrv.client = cli
+	switch conf.Env {
+	case config.None:
+		panic("Please set the btc env in config.yml!")
+		break
+	case config.Net:
+		btcEnv = &chaincfg.MainNetParams
+		break
+	case config.TestNet:
+		btcEnv = &chaincfg.TestNet3Params
+		break
+	case config.Regtest:
+		btcEnv = &chaincfg.RegressionNetParams
+		break
+	}
 	log.Println("coins=>btc_wallet=>initClinet sccuess.")
 }
+
+var (
+	certSrv cert.BtcCertService
+	btcSrv  BtcService
+	btcEnv  *chaincfg.Params
+)
 
 /////////////////////////////////////////全局接口///////START////////////////////////////////////////
 /*
@@ -73,7 +97,7 @@ func (*BtcService) GetNewAddress(account string, mode AcountRunMode) (address, a
 /* 验证publickey对应的地址是否已存在于链中
 pubkey 公钥 */
 func (*BtcService) CheckAddressExists(pubKey string) error {
-	address, err := btcutil.DecodeAddress(pubKey, &chaincfg.RegressionNetParams)
+	address, err := btcutil.DecodeAddress(pubKey, btcEnv)
 	addrValid, err := btcSrv.client.ValidateAddress(address)
 	if err != nil {
 		return err
@@ -151,7 +175,7 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 		return
 	}
 	// 输出1, 给form----------------找零-------------------
-	addrf, err := btcutil.DecodeAddress(addrFrom, &chaincfg.RegressionNetParams)
+	addrf, err := btcutil.DecodeAddress(addrFrom, btcEnv)
 	if err != nil {
 		return
 	}
@@ -162,7 +186,7 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 	baf := int64((outsu - totalTran) * 1e8)
 	tx.AddTxOut(wire.NewTxOut(baf, pkScriptf))
 	//输出2，给to------------------付钱-----------------
-	addrt, err := btcutil.DecodeAddress(addrTo, &chaincfg.RegressionNetParams)
+	addrt, err := btcutil.DecodeAddress(addrTo, btcEnv)
 	if err != nil {
 		return
 	}
@@ -214,7 +238,7 @@ func (*BtcService) CheckTxMergerStatus(txId string) error {
 
 //根据address获取未花费的tx
 func getUnspentByAddress(address string) (unspents []btcjson.ListUnspentResult, err error) {
-	btcAdd, err := btcutil.DecodeAddress(address, &chaincfg.RegressionNetParams)
+	btcAdd, err := btcutil.DecodeAddress(address, btcEnv)
 	if err != nil {
 		return
 	}
@@ -250,7 +274,7 @@ func addPubkeyToWallet(pubKey, accountIn string) (accountOut string, err error) 
 	if err = btcSrv.client.ImportPubKey(pubKey); err != nil {
 		return
 	}
-	address, _ := btcutil.DecodeAddress(pubKey, &chaincfg.RegressionNetParams)
+	address, _ := btcutil.DecodeAddress(pubKey, btcEnv)
 	//修改名字 忽略错误
 	if err = btcSrv.client.SetAccount(address, accountIn); err != nil {
 		return
@@ -267,7 +291,7 @@ func addAddressToWallet(pubKey, accountIn string) (accountOut string, err error)
 	if err != nil {
 		return
 	}
-	address, _ := btcutil.DecodeAddress(pubKey, &chaincfg.RegressionNetParams)
+	address, _ := btcutil.DecodeAddress(pubKey, btcEnv)
 	if err = btcSrv.client.ImportAddress(address.EncodeAddress()); err != nil {
 		return
 	}
@@ -290,7 +314,7 @@ func sign(tx *wire.MsgTx, privKey string, pkScripts [][]byte) error {
 	} */
 	for i, _ := range tx.TxIn {
 		script, err := txscript.SignatureScript(tx, i, pkScripts[i], txscript.SigHashAll, wif.PrivKey, false)
-		//script, err := txscript.SignTxOutput(&chaincfg.RegressionNetParams, tx, i, pkScripts[i], txscript.SigHashAll, txscript.KeyClosure(lookupKey), nil, nil)
+		//script, err := txscript.SignTxOutput(runenv, tx, i, pkScripts[i], txscript.SigHashAll, txscript.KeyClosure(lookupKey), nil, nil)
 		if err != nil {
 			return err
 		}
@@ -355,7 +379,7 @@ func (*BtcService) GetTxByAddress(addrs []string, name string) (interface{}, err
 	ct := len(addrs)
 	addresses := make([]btcutil.Address, 0, ct)
 	for _, v := range addrs {
-		address, err := btcutil.DecodeAddress(v, &chaincfg.RegressionNetParams)
+		address, err := btcutil.DecodeAddress(v, btcEnv)
 		if err != nil {
 			log.Println("一个废物")
 		} else {

@@ -10,23 +10,48 @@ import (
 	"strconv"
 	"time"
 
+	"blockchainDemo/config"
 	"github.com/stellar/go/build"
 	"github.com/stellar/go/clients/horizon"
+	"log"
 )
 
+////////////////////基础设施//////////////////////////
 type XlmService struct {
 }
 
-var (
-	certXlmSrv cert.XlmCertService
-	xlmSrv     XlmService
+//装载btc配置
+func initXlmClinet(conf *config.XlmConf) {
 
+	switch conf.Env {
+	case config.None:
+		panic("Please set the btc env in config.yml!")
+		break
+	case config.Net:
+		client = horizon.DefaultPublicNetClient
+		break
+	case config.TestNet:
+	case config.Regtest:
+		client = horizon.DefaultTestNetClient
+		break
+	default:
+		panic("Please set the btc env in config.yml!")
+		break
+	}
+	log.Println("coins=>xlm_wallet=>initClinet sccuess.")
+}
+
+var (
+	certXlmSrv    cert.XlmCertService
+	xlmSrv        XlmService
+	client        *horizon.Client
 	baseReserve   float64 = 0.5    //账户保证金基数
 	baseFee       float64 = 0.0001 //小费基数（单位:xlm）
 	baseFeeLemuns uint64  = 100    //小费 (单位：lumens)
 
 )
 
+//////////////////////////////////////////////////////
 //生成新账号
 //
 func (*XlmService) GetNewAddress(account string, mode AcountRunMode) (address, accountOut string, err error) {
@@ -59,7 +84,7 @@ func (*XlmService) GetNewAddress(account string, mode AcountRunMode) (address, a
 		return
 	}
 	//获取序列数
-	num, err := horizon.DefaultTestNetClient.SequenceForAccount(godAddress)
+	num, err := client.SequenceForAccount(godAddress)
 	if err != nil {
 		return
 	}
@@ -93,7 +118,7 @@ func (*XlmService) GetNewAddress(account string, mode AcountRunMode) (address, a
 	if err != nil {
 		return
 	}
-	_, err = horizon.DefaultTestNetClient.SubmitTransaction(txeB64) //提交tx
+	_, err = client.SubmitTransaction(txeB64) //提交tx
 	if err != nil {
 		return
 	}
@@ -105,7 +130,7 @@ func (*XlmService) GetNewAddress(account string, mode AcountRunMode) (address, a
 	return key.Address, account, nil
 }
 func (*XlmService) GetBalanceInAddress(address string) (balance float64, err error) {
-	account, err := horizon.DefaultTestNetClient.LoadAccount(address)
+	account, err := client.LoadAccount(address)
 	if err != nil {
 		return 0, err
 	}
@@ -133,7 +158,7 @@ func (*XlmService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 	}
 	//----------------------------------------END-----------
 	//验证地址是否有效
-	if _, err = horizon.DefaultTestNetClient.LoadAccount(addrTo); err != nil {
+	if _, err = client.LoadAccount(addrTo); err != nil {
 		return
 	}
 	//100 stroops (0.00001 XLM).
@@ -150,9 +175,9 @@ func (*XlmService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 	//小费是自己扣的，不需要这边实现，金额总数也不需要验证，当然可以验证
 	tx, err := build.Transaction(
 		build.TestNetwork,
-		build.SourceAccount{addrFrom},                    //lumens（代币名称）当前主人的地址
-		build.AutoSequence{horizon.DefaultTestNetClient}, //sequence序列号自动
-		build.MemoText{"Just do it"},                     //元数据，就是便签
+		build.SourceAccount{addrFrom}, //lumens（代币名称）当前主人的地址
+		build.AutoSequence{client},    //sequence序列号自动
+		build.MemoText{"Just do it"},  //元数据，就是便签
 		build.Payment(
 			build.Destination{addrTo},  // lumens（代币名称）下个主人的地址
 			build.NativeAmount{amount}, //官方payments用string主要防止精度丢失
@@ -175,7 +200,7 @@ func (*XlmService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 	}
 
 	// And finally, send it off to Stellar!
-	resp, err := horizon.DefaultTestNetClient.SubmitTransaction(txeB64) //提交tx
+	resp, err := client.SubmitTransaction(txeB64) //提交tx
 	if err != nil {
 		return
 	}
@@ -185,7 +210,7 @@ func (*XlmService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 }
 
 func (*XlmService) CheckTxMergerStatus(txId string) error {
-	_, err := horizon.DefaultTestNetClient.LoadTransaction(txId)
+	_, err := client.LoadTransaction(txId)
 	if err != nil {
 		return err
 	}
@@ -195,7 +220,7 @@ func (*XlmService) CheckTxMergerStatus(txId string) error {
 //获取所有账户信息
 func (*XlmService) CheckAddressExists(address string) error {
 
-	account, err := horizon.DefaultTestNetClient.LoadAccount(address)
+	account, err := client.LoadAccount(address)
 	if err != nil {
 		return err
 	}
@@ -217,7 +242,7 @@ func (*XlmService) GetPaymentsNow(address string) error {
 		cancel()
 	}()
 
-	err := horizon.DefaultTestNetClient.StreamPayments(ctx, address, &cursor, func(payment horizon.Payment) {
+	err := client.StreamPayments(ctx, address, &cursor, func(payment horizon.Payment) {
 		fmt.Println("Payment type", payment.Type)
 		fmt.Println("Payment Paging Token", payment.PagingToken)
 		fmt.Println("Payment From", payment.From)
@@ -237,11 +262,11 @@ func (*XlmService) GetPaymentsNow(address string) error {
 }
 
 func (*XlmService) GetAllApi(address string) error {
-	hd, err := horizon.DefaultTestNetClient.HomeDomainForAccount(address)
+	hd, err := client.HomeDomainForAccount(address)
 	fmt.Println(hd, err)
 
-	/*	horizon.DefaultTestNetClient.LoadAccountMergeAmount(&horizon.Payment{})
-		horizon.DefaultTestNetClient.lo*/
+	/*	client.LoadAccountMergeAmount(&horizon.Payment{})
+		client.lo*/
 
 	return nil
 }
@@ -277,7 +302,7 @@ func (*XlmService) ClearAccount(from, to string) (err error) {
 	}
 
 	// And finally, send it off to Stellar!
-	_, err = horizon.DefaultTestNetClient.SubmitTransaction(txeB64) //提交交易
+	_, err = client.SubmitTransaction(txeB64) //提交交易
 	if err != nil {
 		return
 	}
@@ -301,7 +326,7 @@ func checkBalanceEnough(sourceAddress string, comparedAmount float64) error {
 
 //获取账户序列数
 func sequenceForAccount(account string) error {
-	num, err := horizon.DefaultTestNetClient.SequenceForAccount(account)
+	num, err := client.SequenceForAccount(account)
 	if err != nil {
 		return err
 	}
@@ -312,10 +337,10 @@ func sequenceForAccount(account string) error {
 /////////////////////////////////////////////////////just for test///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func (*XlmService) Other() {
-	homeDomain, err := horizon.DefaultTestNetClient.HomeDomainForAccount("GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX")
+	homeDomain, err := client.HomeDomainForAccount("GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX")
 	fmt.Println(homeDomain, err)
-	offerset, err := horizon.DefaultTestNetClient.LoadAccountOffers("GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX")
+	offerset, err := client.LoadAccountOffers("GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX")
 	fmt.Println(offerset, err)
-	horizon.DefaultTestNetClient.LoadOperation("")
+	client.LoadOperation("")
 
 }
