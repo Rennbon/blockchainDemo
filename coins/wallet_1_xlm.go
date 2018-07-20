@@ -29,10 +29,12 @@ func initXlmClinet(conf *config.XlmConf) {
 		break
 	case config.Net:
 		client = horizon.DefaultPublicNetClient
+		netWork = build.PublicNetwork
 		break
 	case config.TestNet:
 	case config.Regtest:
 		client = horizon.DefaultTestNetClient
+		netWork = build.TestNetwork
 		break
 	default:
 		panic("Please set the btc env in config.yml!")
@@ -45,6 +47,7 @@ var (
 	certXlmSrv    cert.XlmCertService
 	xlmSrv        XlmService
 	client        *horizon.Client
+	netWork       build.Network
 	baseReserve   float64 = 0.5    //账户保证金基数
 	baseFee       float64 = 0.0001 //小费基数（单位:xlm）
 	baseFeeLemuns uint64  = 100    //小费 (单位：lumens)
