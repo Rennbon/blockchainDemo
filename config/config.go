@@ -12,6 +12,7 @@ import (
 type Config struct {
 	BtcConf BtcConf
 	Mongo   Mongo
+	XlmConf XlmConf
 }
 
 func init() {
@@ -52,15 +53,29 @@ func CheckConfig(c *Config, cnames []string) error {
 	return nil
 }
 
-type BtcConf struct {
-	IP     string //地址
-	Port   string //端口号
-	User   string //账户
-	Passwd string //密码
+type EnvType int8
+
+const (
+	None EnvType = iota
+	Net
+	TestNet
+	Regtest
+)
+
+type XlmConf struct {
+	Env EnvType
 }
 type Mongo struct {
 	Addr      string
 	Timeout   time.Duration
 	PoolLimit int
 	Database  string
+}
+
+type BtcConf struct {
+	IP     string  //地址
+	Port   string  //端口号
+	User   string  //账户
+	Passwd string  //密码
+	Env    EnvType //运行环境
 }

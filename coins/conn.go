@@ -3,32 +3,31 @@ package coins
 import (
 	"blockchainDemo/config"
 	"log"
-
-	"github.com/btcsuite/btcd/rpcclient"
 )
 
-var keys []string = []string{"BtcConf"}
-var btcConn *rpcclient.ConnConfig
+var (
+	//验证基础配置是否有效
+	keys = []string{"BtcConf", "XlmConf"}
+	conf *config.Config
+)
 
+//注入先写死
+//实际场景，最好依赖注入，维护线程池，动态config
+//然后能实现动态更新配置并同步到conn,及一些配置的变量
 func init() {
 	initConfig()
-	initBtcClinet()
+	initBtcClinet(&conf.BtcConf)
+	initXlmClinet(&conf.XlmConf)
 }
 func initConfig() {
-	conf, err := config.LoadConfig()
+	conftemp, err := config.LoadConfig()
 	if err != nil {
 		panic("wallet init LoadConfig panic.")
 	}
-	err = config.CheckConfig(conf, keys)
+	err = config.CheckConfig(conftemp, keys)
 	if err != nil {
 		panic("wallet init CheckConfig panic.")
 	}
-	btcConn = &rpcclient.ConnConfig{
-		Host:         conf.BtcConf.IP + ":" + conf.BtcConf.Port,
-		User:         conf.BtcConf.User,
-		Pass:         conf.BtcConf.Passwd,
-		HTTPPostMode: true,
-		DisableTLS:   true,
-	}
+	conf = conftemp
 	log.Println("coins=>conn=>initConfig sccuess.")
 }

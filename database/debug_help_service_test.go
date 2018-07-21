@@ -1,14 +1,15 @@
-package database
+package database_test
 
 import (
+	db "blockchainDemo/database"
 	"fmt"
 	"testing"
 )
 
-var dhSrv DHService
+var dhSrv db.DHService
 
 func TestAddAccount(t *testing.T) {
-	err := dhSrv.AddAccount("debug", "prv", "pub", "seed", "addr", BTC)
+	err := dhSrv.AddAccount("debug", "prv", "pub", "seed", "addr", db.BTC)
 	if err != nil {
 		t.Error(err)
 	}
@@ -33,7 +34,7 @@ func TestGetAccountByAddresses(t *testing.T) {
 }
 
 func TestAddTx(t *testing.T) {
-	err := dhSrv.AddTx("name", "txid", "addr")
+	err := dhSrv.AddTx("name", "txid", []string{"addr"})
 	if err != nil {
 		t.Error(err)
 	}
