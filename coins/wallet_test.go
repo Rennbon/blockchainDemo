@@ -44,7 +44,7 @@ func TestGetNewAddress(t *testing.T) {
 
 //测试获取账户余额
 func TestGetBalanceInAddress(t *testing.T) {
-	handler.LoadService(xlm)
+	handler.LoadService(btc)
 	var (
 		balance float64
 		err     error
