@@ -1,16 +1,16 @@
 package coins
 
 import (
-	"blockchainDemo/cert"
-	"blockchainDemo/database"
-	"blockchainDemo/errors"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Rennbon/blockchainDemo/cert"
+	"github.com/Rennbon/blockchainDemo/database"
+	"github.com/Rennbon/blockchainDemo/errors"
 	"strconv"
 	"time"
 
-	"blockchainDemo/config"
+	"github.com/Rennbon/blockchainDemo/config"
 	"github.com/stellar/go/build"
 	"github.com/stellar/go/clients/horizon"
 	"log"

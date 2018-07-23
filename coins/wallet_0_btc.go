@@ -1,12 +1,12 @@
 package coins
 
 import (
-	"blockchainDemo/cert"
-	"blockchainDemo/config"
-	"blockchainDemo/database"
-	"blockchainDemo/errors"
 	"encoding/hex"
 	"fmt"
+	"github.com/Rennbon/blockchainDemo/cert"
+	"github.com/Rennbon/blockchainDemo/config"
+	"github.com/Rennbon/blockchainDemo/database"
+	"github.com/Rennbon/blockchainDemo/errors"
 	"log"
 
 	"github.com/btcsuite/btcd/btcec"

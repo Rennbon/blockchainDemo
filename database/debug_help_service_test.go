@@ -1,8 +1,8 @@
 package database_test
 
 import (
-	db "blockchainDemo/database"
 	"fmt"
+	db "github.com/Rennbon/blockchainDemo/database"
 	"testing"
 )
 

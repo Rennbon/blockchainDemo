@@ -1,7 +1,7 @@
 package coins
 
 import (
-	"blockchainDemo/database"
+	"github.com/Rennbon/blockchainDemo/database"
 	"reflect"
 )
 

@@ -1,8 +1,8 @@
 package coins_test
 
 import (
-	"blockchainDemo/coins"
 	"fmt"
+	"github.com/Rennbon/blockchainDemo/coins"
 	"strconv"
 	"testing"
 	"time"
@@ -44,7 +44,7 @@ func TestGetNewAddress(t *testing.T) {
 
 //测试获取账户余额
 func TestGetBalanceInAddress(t *testing.T) {
-	handler.LoadService(btc)
+	handler.LoadService(xlm)
 	var (
 		balance float64
 		err     error
@@ -88,7 +88,7 @@ func TestSendAddressToAddress(t *testing.T) {
 
 //测试交易状态
 func TestCheckTxMergerStatus(t *testing.T) {
-	handler.LoadService(btc)
+	handler.LoadService(xlm)
 	var (
 		err error
 	)

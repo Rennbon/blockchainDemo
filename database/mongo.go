@@ -1,7 +1,7 @@
 package database
 
 import (
-	"blockchainDemo/config"
+	"github.com/Rennbon/blockchainDemo/config"
 	"log"
 	"strings"
 	"time"

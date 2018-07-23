@@ -1,9 +1,9 @@
 package cert_test
 
 import (
-	"blockchainDemo/cert"
 	"encoding/json"
 	"fmt"
+	"github.com/Rennbon/blockchainDemo/cert"
 	"testing"
 )
 

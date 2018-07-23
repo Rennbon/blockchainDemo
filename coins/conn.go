@@ -1,7 +1,7 @@
 package coins
 
 import (
-	"blockchainDemo/config"
+	"github.com/Rennbon/blockchainDemo/config"
 	"log"
 )
 
