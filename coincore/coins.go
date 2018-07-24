@@ -5,7 +5,10 @@ import (
 	"math"
 	"math/big"
 	"strconv"
+	"github.com/Rennbon/blockchainDemo/utils"
+	"github.com/go-errors/errors"
 )
+
 
 //代币单位
 type CoinUnitName string
@@ -27,6 +30,7 @@ const (
 	CoinBox      CoinUnit = -8
 )
 
+
 func (ca *CoinAmount) String(hasUnitName bool) string {
 	if &ca == nil {
 		return ""
@@ -47,16 +51,45 @@ func (ca *CoinAmount) String(hasUnitName bool) string {
 	return buf.String()
 }
 
+var strtuil utils.StrUtil
+
+//转换string类型数字为整数部分和小数部分
+func splitStrToNum(str string,cb CoinUnit,method getUnitName)(ca *CoinAmount,err error ){
+	l,r,err:= strtuil.SplitStrToNum(str)
+	if err!=nil {
+		return
+	}
+	ca =&CoinAmount{
+		UnitName:method(cb),
+		CoinUnit:cb,
+	}
+	ltmp:=big.NewInt(0)
+	bl :=false
+	if ca.IntPart,bl =ltmp.SetString(l,10);!bl{
+		err = errors.New("parse fail in splitStrToNum")
+		return
+	}
+	if r!= ""{
+		if ca.DecPart,err = strconv.ParseFloat(r,64);err!=nil{
+			return
+		}
+	}
+	return
+}
+
+type getUnitName func(CoinUnit) (CoinUnitName)
+
+
 //接入币种实现接口
 type CoinAmounter interface {
 	//获取新amount
 	//num:数值
 	//trgt：目标精度
-	GetNewAmount(num string, trgt CoinUnit) *CoinAmount
+	GetNewOrdinaryAmount(num string)( *CoinAmount,error)
 	//转换amount精度
 	//ca：当前coinAmount实体
 	//trgt:目标精度
-	ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit)
+	ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit)error
 	//获取单位名称
 	GetBtcUnitName(CoinUnit) CoinUnitName
 }

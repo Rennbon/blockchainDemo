@@ -1,25 +1,22 @@
 package coincore
 
-import (
-	"github.com/Rennbon/blockchainDemo/utils"
-	"strings"
-)
-
 type BtcCoin struct {
-	CoinAmount
+
 }
 
 //
 const btcPrec int64 = 1e8
 
-func (*BtcCoin) GetCoinUnitName(cu CoinUnit) CoinUnitName {
+func (*BtcCoin) GetBtcUnitName(cu CoinUnit) CoinUnitName{
 	return getBtcUnitName(cu)
 }
 
-func (*BtcCoin) GetNewAmount(num string, trgt CoinUnit) *CoinAmount {
-
+func (*BtcCoin) GetNewOrdinaryAmount(num string)(ca *CoinAmount,err error){
+	return  splitStrToNum(num,CoinOrdinary,getBtcUnitName)
 }
-
+func (*BtcCoin) ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit)error{
+	return nil
+}
 func getBtcUnitName(cu CoinUnit) CoinUnitName {
 	switch cu {
 	case CoinBilli:
