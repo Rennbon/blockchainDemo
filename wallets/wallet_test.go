@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"testing"
 	"time"
+	"github.com/Rennbon/blockchainDemo/wallets"
 )
 
 type CoinHandler struct {
