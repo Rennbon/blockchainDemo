@@ -11,7 +11,7 @@ import (
 type CoinUnitName string
 type CoinUnit int8
 type CoinAmount struct {
-	IntPart  big.Int      //整数部分
+	IntPart  *big.Int     //整数部分
 	DecPart  float64      //小数部分(整数不存值)
 	UnitName CoinUnitName //单位字符串
 	CoinUnit CoinUnit     //单位精度
@@ -35,7 +35,10 @@ func (ca *CoinAmount) String(hasUnitName bool) string {
 	buf.WriteString(ca.IntPart.String())
 	if ca.CoinUnit < 0 {
 		prec := int(math.Abs(float64(ca.CoinUnit)))
-		buf.WriteString(strconv.FormatFloat(ca.DecPart, 'f', prec, 10))
+		fstr := strconv.FormatFloat(ca.DecPart, 'f', prec, 64)
+		l := len(fstr)
+		fstr = fstr[1:l]
+		buf.WriteString(fstr)
 	}
 	if hasUnitName {
 		buf.WriteString(" ")
@@ -44,7 +47,8 @@ func (ca *CoinAmount) String(hasUnitName bool) string {
 	return buf.String()
 }
 
-type Coiner interface {
+//接入币种实现接口
+type CoinAmounter interface {
 	//获取新amount
 	//num:数值
 	//trgt：目标精度
@@ -53,4 +57,6 @@ type Coiner interface {
 	//ca：当前coinAmount实体
 	//trgt:目标精度
 	ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit)
+	//获取单位名称
+	GetBtcUnitName(CoinUnit) CoinUnitName
 }
