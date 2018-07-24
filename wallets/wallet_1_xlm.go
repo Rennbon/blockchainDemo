@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/Rennbon/blockchainDemo/cert"
+	"github.com/Rennbon/blockchainDemo/certs"
 	"github.com/Rennbon/blockchainDemo/database"
 	"github.com/Rennbon/blockchainDemo/errors"
 	"strconv"

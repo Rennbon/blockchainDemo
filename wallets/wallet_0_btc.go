@@ -3,7 +3,7 @@ package wallets
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/Rennbon/blockchainDemo/cert"
+
 	"github.com/Rennbon/blockchainDemo/config"
 	"github.com/Rennbon/blockchainDemo/database"
 	"github.com/Rennbon/blockchainDemo/errors"
@@ -17,6 +17,7 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
+	"github.com/Rennbon/blockchainDemo/certs"
 )
 
 type BtcService struct {
