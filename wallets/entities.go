@@ -1,4 +1,4 @@
-package coins
+package wallets
 
 type Account struct {
 	Name   string

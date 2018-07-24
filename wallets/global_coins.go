@@ -1,4 +1,4 @@
-package coins
+package wallets
 
 import (
 	"github.com/Rennbon/blockchainDemo/database"
@@ -16,7 +16,7 @@ const (
 var dhSrv database.DHService
 
 //基础接口约定，各类coin接入必须实现的接口
-type Coiner interface {
+type Walleter interface {
 	/*	//将代币转为最精力度的整数
 		// 已法币为例
 		// 假设人民币以分为最小单位

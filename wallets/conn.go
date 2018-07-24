@@ -1,4 +1,4 @@
-package coins
+package wallets
 
 import (
 	"github.com/Rennbon/blockchainDemo/config"

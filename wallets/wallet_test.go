@@ -1,8 +1,7 @@
-package coins_test
+package wallets_test
 
 import (
 	"fmt"
-	"github.com/Rennbon/blockchainDemo/coins"
 	"reflect"
 	"strconv"
 	"testing"
@@ -10,21 +9,21 @@ import (
 )
 
 type CoinHandler struct {
-	coins.Coiner
+	wallets.Walleter
 	TypeName string
 }
 
-func (ch *CoinHandler) LoadService(g coins.Coiner) error {
+func (ch *CoinHandler) LoadService(g wallets.Walleter) error {
 	if g != nil {
-		ch.Coiner = g
+		ch.Walleter = g
 	}
 	typ := reflect.TypeOf(g)
 	ch.TypeName = typ.String()
 	return nil
 }
 
-var btc *coins.BtcService
-var xlm *coins.XlmService
+var btc *wallets.BtcService
+var xlm *wallets.XlmService
 var handler CoinHandler
 
 /* 相关接口
@@ -46,10 +45,10 @@ func TestGetNewAddress(t *testing.T) {
 	)
 	switch handler.TypeName {
 	case "*coins.BtcService":
-		address, account, err = handler.GetNewAddress("Test"+strconv.FormatInt(time.Now().Unix(), 10), coins.AddrMode)
+		address, account, err = handler.GetNewAddress("Test"+strconv.FormatInt(time.Now().Unix(), 10), wallets.AddrMode)
 		break
 	case "*coins.XlmService":
-		address, account, err = handler.GetNewAddress("", coins.AddrMode)
+		address, account, err = handler.GetNewAddress("", wallets.AddrMode)
 	}
 	if err != nil {
 		t.Error(err)
