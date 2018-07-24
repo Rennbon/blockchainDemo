@@ -31,14 +31,14 @@ func (*BtcCertService) GenerateSimpleKey() (*Key, error) {
 	addr := pubKey.EncodeAddress()
 	return &Key{PrivKey: privKeyWif.String(), PubKey: pubKey.String(), Address: addr}, nil
 }
-func (*BtcCertService) GetNewAddress(pubKey string) (string, error) {
+func (*BtcCertService) GetNewAddress(pubKey string) (address string, err error) {
 	pubKeyByte, err := hex.DecodeString(pubKey)
 	if err != nil {
-		return "", err
+		return
 	}
 	addrspub, err := btcutil.NewAddressPubKey(pubKeyByte, &chaincfg.RegressionNetParams)
 	if err != nil {
-		return "", err
+		return
 	}
 	return addrspub.EncodeAddress(), nil
 }

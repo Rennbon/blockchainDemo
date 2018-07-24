@@ -179,6 +179,7 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 	tx.AddTxOut(wire.NewTxOut(baf, pkScriptf))
 	//输出2，给to------------------付钱-----------------
 	addrt, err := btcutil.DecodeAddress(addrTo, btcEnv)
+
 	if err != nil {
 		return
 	}

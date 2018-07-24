@@ -18,10 +18,10 @@ func (*XlmCertService) GenerateSimpleKey() (*Key, error) {
 	key := &Key{Address: pair.Address(), Seed: pair.Seed()}
 	return key, nil
 }
-func (*XlmCertService) GetNewAddress(seed string) (string, error) {
+func (*XlmCertService) GetNewAddress(seed string) (address string, err error) {
 	kp, err := keypair.Parse(seed)
 	if err != nil {
-		return "", err
+		return
 	}
 	return kp.Address(), nil
 }

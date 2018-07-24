@@ -3,14 +3,29 @@ package coins_test
 import (
 	"fmt"
 	"github.com/Rennbon/blockchainDemo/coins"
+	"reflect"
 	"strconv"
 	"testing"
 	"time"
 )
 
+type CoinHandler struct {
+	coins.Coiner
+	TypeName string
+}
+
+func (ch *CoinHandler) LoadService(g coins.Coiner) error {
+	if g != nil {
+		ch.Coiner = g
+	}
+	typ := reflect.TypeOf(g)
+	ch.TypeName = typ.String()
+	return nil
+}
+
 var btc *coins.BtcService
 var xlm *coins.XlmService
-var handler coins.CoinHandler
+var handler CoinHandler
 
 /* 相关接口
 GetNewAddress(string, AcountRunMode) (address, accountOut string, err error)

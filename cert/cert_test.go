@@ -4,12 +4,27 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/Rennbon/blockchainDemo/cert"
+	"reflect"
 	"testing"
 )
 
+type CertHandler struct {
+	cert.Generater
+	TypeName string
+}
+
+func (ch *CertHandler) LoadService(g cert.Generater) error {
+	if g != nil {
+		ch.Generater = g
+	}
+	typ := reflect.TypeOf(g)
+	ch.TypeName = typ.String()
+	return nil
+}
+
 var btc *cert.BtcCertService
 var xlm *cert.XlmCertService
-var handler cert.CertHandler
+var handler CertHandler
 
 func TestGenerateSimpleKey(t *testing.T) {
 	handler.LoadService(xlm)
