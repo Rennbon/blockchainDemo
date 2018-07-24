@@ -54,7 +54,7 @@ func initBtcClinet(conf *config.BtcConf) {
 }
 
 var (
-	certSrv cert.BtcCertService
+	certSrv certs.BtcCertService
 	//环境变量
 	btcClient *rpcclient.Client
 	btcEnv    *chaincfg.Params

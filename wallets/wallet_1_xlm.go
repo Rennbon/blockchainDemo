@@ -44,7 +44,7 @@ func initXlmClinet(conf *config.XlmConf) {
 }
 
 var (
-	certXlmSrv cert.XlmCertService
+	certXlmSrv certs.XlmCertService
 	//环境变量
 	client  *horizon.Client
 	netWork build.Network

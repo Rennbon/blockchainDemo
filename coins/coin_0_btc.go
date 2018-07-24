@@ -1,4 +1,4 @@
-package coincore
+package coins
 
 type BtcCoin struct {
 

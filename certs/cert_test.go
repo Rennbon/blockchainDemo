@@ -1,4 +1,4 @@
-package cert_test
+package certs_test
 
 import (
 	"encoding/json"
@@ -6,14 +6,15 @@ import (
 	"github.com/Rennbon/blockchainDemo/cert"
 	"reflect"
 	"testing"
+	"github.com/Rennbon/blockchainDemo/certs"
 )
 
 type CertHandler struct {
-	cert.Generater
+	certs.Generater
 	TypeName string
 }
 
-func (ch *CertHandler) LoadService(g cert.Generater) error {
+func (ch *CertHandler) LoadService(g certs.Generater) error {
 	if g != nil {
 		ch.Generater = g
 	}
@@ -22,8 +23,8 @@ func (ch *CertHandler) LoadService(g cert.Generater) error {
 	return nil
 }
 
-var btc *cert.BtcCertService
-var xlm *cert.XlmCertService
+var btc *certs.BtcCertService
+var xlm *certs.XlmCertService
 var handler CertHandler
 
 func TestGenerateSimpleKey(t *testing.T) {
