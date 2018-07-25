@@ -30,7 +30,7 @@ var (
 func TestCoinAmount_String(t *testing.T) {
 	bg := big.NewInt(1000)
 	amount := &coins.CoinAmount{bg, 0.00000004, "元", coins.CoinMicro}
-	t.Log(amount.String(true))
+	t.Log(amount.String())
 }
 
 //测试用例模板
@@ -49,7 +49,7 @@ func TestBtcCoin_GetNewAmount(t *testing.T) {
 			t.Error(err)
 			t.Fail()
 		}
-		if btresult.String(true) != ca.String(true) {
+		if btresult.String() != ca.String() {
 			t.Error("生成值错误")
 			t.Fail()
 		}
@@ -65,14 +65,20 @@ func TestBtcCoin_ConvertAmountPrec(t *testing.T) {
 	handler.LoadService(btc)
 	switch handler.TypeName {
 	case btcSerName:
-		btresult := &coins.CoinAmount{
+		ca := &coins.CoinAmount{
 			big.NewInt(996123812),
-			0.123123123,
+			0.123,
 			"BTC",
 			coins.CoinOrdinary,
 		}
-		handler.ConvertAmountPrec(btresult, coins.CoinBox)
-		t.Log(btresult)
+		caout, err := handler.ConvertAmountPrec(ca, coins.CoinMega)
+		if err != nil {
+			t.Error(err)
+			t.Fail()
+		} else {
+			t.Log(caout)
+		}
+
 		break
 	case "*coins.XlmCoin":
 		break
@@ -80,13 +86,31 @@ func TestBtcCoin_ConvertAmountPrec(t *testing.T) {
 }
 func BenchmarkBtcCoin_ConvertAmountPrec(b *testing.B) {
 	b.ReportAllocs()
+	for i := 0; i < b.N; i++ { //use b.N for looping
+		btresult := &coins.CoinAmount{
+			big.NewInt(996123812),
+			0.12312312,
+			"BTC",
+			coins.CoinOrdinary,
+		}
+		coins.ConvertcoinUnit1(btresult, coins.CoinBox, btc.GetBtcUnitName)
+	}
+}
+
+func TestBtcCoin_GetNewOrdinaryAmount(t *testing.T) {
 	btresult := &coins.CoinAmount{
 		big.NewInt(996123812),
-		0.123123123,
+		0.12312312,
 		"BTC",
 		coins.CoinOrdinary,
 	}
-	coins.ConvertcoinUnit(btresult, coins.CoinOrdinary, btc.GetBtcUnitName)
+	caout, err := coins.ConvertcoinUnit1(btresult, coins.CoinBox, btc.GetBtcUnitName)
+	if err != nil {
+		t.Error(err)
+		t.Fail()
+	} else {
+		t.Log(caout)
+	}
 }
 
 //测试用例模板

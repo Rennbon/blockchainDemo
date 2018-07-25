@@ -32,6 +32,13 @@ func TestStrUtil_SplitStrToNum(t *testing.T) {
 		t.Fail()
 	}
 }
+func BenchmarkStrUtil_SplitStrToNum(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ { //use b.N for looping
+		su.SplitStrToNum("12345.67890", false)
+	}
+}
+
 func TestStrUtil_MoveDecimalPosition(t *testing.T) {
 	slc := make([]struct {
 		from, to, target string
@@ -93,8 +100,6 @@ func TestStrUtil_MoveDecimalPosition(t *testing.T) {
 func BenchmarkStrUtil_MoveDecimalPosition(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ { //use b.N for looping
-		str, _ := su.MoveDecimalPosition("12345.67890", -10, false)
-		if str == "" {
-		}
+		su.MoveDecimalPosition("12345.12345", 10, false)
 	}
 }

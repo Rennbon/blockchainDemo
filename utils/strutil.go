@@ -8,6 +8,8 @@ import (
 type StrUtil struct {
 }
 
+//切分数值类型为整数和小数
+//strCheck：是否正则验证，正则验证耗费性能，100%确认的数传false
 func (*StrUtil) SplitStrToNum(str string, strCheck bool) (intstr, decstr string, err error) {
 	return splitStrToNum(str, strCheck)
 }
@@ -27,6 +29,9 @@ func splitStrToNum(str string, strCheck bool) (intstr, decstr string, err error)
 	}
 	return
 }
+
+//将数值类型移位
+//strCheck：是否正则验证，正则验证耗费性能，100%确认的数传false
 func (*StrUtil) MoveDecimalPosition(str string, gap int, strCheck bool) (newstr string, err error) {
 	return moveDecimalPosition(str, gap, strCheck)
 }
