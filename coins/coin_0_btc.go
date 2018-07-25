@@ -1,20 +1,19 @@
 package coins
 
 type BtcCoin struct {
-
 }
 
 //
 const btcPrec int64 = 1e8
 
-func (*BtcCoin) GetBtcUnitName(cu CoinUnit) CoinUnitName{
+func (*BtcCoin) GetBtcUnitName(cu CoinUnit) CoinUnitName {
 	return getBtcUnitName(cu)
 }
 
-func (*BtcCoin) GetNewOrdinaryAmount(num string)(ca *CoinAmount,err error){
-	return  splitStrToNum(num,CoinOrdinary,getBtcUnitName)
+func (*BtcCoin) GetNewOrdinaryAmount(num string) (ca *CoinAmount, err error) {
+	return splitStrToNum(num, CoinOrdinary, getBtcUnitName)
 }
-func (*BtcCoin) ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit)error{
+func (*BtcCoin) ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit) error {
 	return nil
 }
 func getBtcUnitName(cu CoinUnit) CoinUnitName {
