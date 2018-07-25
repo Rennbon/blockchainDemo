@@ -2,21 +2,27 @@ package coins
 
 import (
 	"bytes"
-	"github.com/Rennbon/blockchainDemo/errors"
-	"github.com/Rennbon/blockchainDemo/utils"
 	"math"
 	"math/big"
 	"strconv"
+
+	"github.com/Rennbon/blockchainDemo/errors"
+	"github.com/Rennbon/blockchainDemo/utils"
 )
 
 //代币单位
 type CoinUnitName string
 type CoinUnit int8
 type CoinAmount struct {
-	IntPart  *big.Int     //整数部分
-	DecPart  float64      //小数部分(整数不存值)
+	IntPart  *big.Int //整数部分
+	DecPart  float64  //小数部分(整数不存值)
+	CoinUnit CoinUnit //单位精度
+	*CoinUnitPrec
+}
+type CoinUnitPrec struct {
+	Prec     int
 	UnitName CoinUnitName //单位字符串
-	CoinUnit CoinUnit     //单位精度
+
 }
 
 const (
@@ -34,10 +40,10 @@ func (ca *CoinAmount) String() string {
 		return ""
 	}
 	var buf bytes.Buffer
+
 	buf.WriteString(ca.IntPart.String())
 	//todo 精度问题，按不同币种来，这里实现有误
-	prec := int(math.Abs(float64(ca.CoinUnit)))
-	fstr := strconv.FormatFloat(ca.DecPart, 'f', prec, 64)
+	fstr := strconv.FormatFloat(ca.DecPart, 'f', ca.Prec, 64)
 	l := len(fstr)
 	fstr = fstr[1:l]
 	buf.WriteString(fstr)
@@ -47,19 +53,19 @@ func (ca *CoinAmount) String() string {
 var strtuil utils.StrUtil
 
 //转换string类型数字为整数部分和小数部分
-func splitStrToNum(str string, cb CoinUnit, method getUnitName) (ca *CoinAmount, err error) {
+func splitStrToNum(str string, cb CoinUnit, gupfunc getUnitPrec) (ca *CoinAmount, err error) {
 	l, r, err := strtuil.SplitStrToNum(str, false)
 	if err != nil {
 		return
 	}
 	ca = &CoinAmount{
-		UnitName: method(cb),
 		CoinUnit: cb,
 	}
+	ca.UnitName = gupfunc(cb).UnitName
 	ltmp := big.NewInt(0)
 	bl := false
 	if ca.IntPart, bl = ltmp.SetString(l, 10); !bl {
-		err = errors.ERR_Param_Fail
+		err = errors.ERR_PARAM_FAIL
 		return
 	}
 	if r != "" {
@@ -70,9 +76,9 @@ func splitStrToNum(str string, cb CoinUnit, method getUnitName) (ca *CoinAmount,
 	}
 	return
 }
-func ConvertcoinUnit(ca *CoinAmount, cb CoinUnit, method getUnitName) (caout *CoinAmount, err error) {
+func ConvertcoinUnit(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *CoinAmount, err error) {
 	if ca == nil {
-		err = errors.ERR_Param_Fail
+		err = errors.ERR_PARAM_FAIL
 		return
 	}
 	if ca.CoinUnit == cb {
@@ -84,14 +90,14 @@ func ConvertcoinUnit(ca *CoinAmount, cb CoinUnit, method getUnitName) (caout *Co
 	if err != nil {
 		return
 	}
-	caout, err = splitStrToNum(newnum, cb, method)
+	caout, err = splitStrToNum(newnum, cb, gupfunc)
 	return
 }
 
 //转换精度
-func ConvertcoinUnit1(ca *CoinAmount, cb CoinUnit, method getUnitName) (caout *CoinAmount, err error) {
+func ConvertcoinUnit1(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *CoinAmount, err error) {
 	if ca == nil {
-		err = errors.ERR_Param_Fail
+		err = errors.ERR_PARAM_FAIL
 		return
 	}
 	if ca.CoinUnit == cb {
@@ -140,24 +146,21 @@ func ConvertcoinUnit1(ca *CoinAmount, cb CoinUnit, method getUnitName) (caout *C
 		caout.IntPart = l
 	}
 	caout.CoinUnit = cb
-	caout.UnitName = method(cb)
+
+	caout.UnitName = gupfunc(cb).UnitName
 	return
 }
 
-type getUnitName func(CoinUnit) CoinUnitName
-
-type getFloatPrec func(unit CoinUnit) (prec int64)
+type getUnitPrec func(cu CoinUnit) (cup *CoinUnitPrec)
 
 //接入币种实现接口
 type CoinAmounter interface {
 	//获取新amount
 	//num:数值
 	//trgt：目标精度
-	GetNewOrdinaryAmount(num string) (*CoinAmount, error)
+	NewCoinAmout(num string) (*CoinAmount, error)
 	//转换amount精度
 	//ca：当前coinAmount实体
 	//trgt:目标精度
 	ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit) (caout *CoinAmount, err error)
-	//获取单位名称
-	GetBtcUnitName(CoinUnit) CoinUnitName
 }

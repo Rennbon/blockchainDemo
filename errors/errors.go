@@ -9,5 +9,5 @@ var (
 	ERR_NOPE                 = errors.New("Nope.")
 	ERR_NOT_ENOUGH_COIN      = errors.New("Not enough coin.")
 	ERR_UNCONFIRMED          = errors.New("Tx unconfirmed.")
-	ERR_Param_Fail           = errors.New("Parameter validation failed.")
+	ERR_PARAM_FAIL           = errors.New("Parameter validation failed.")
 )

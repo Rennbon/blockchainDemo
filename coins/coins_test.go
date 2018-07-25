@@ -1,10 +1,11 @@
 package coins_test
 
 import (
-	"github.com/Rennbon/blockchainDemo/coins"
 	"math/big"
 	"reflect"
 	"testing"
+
+	"github.com/Rennbon/blockchainDemo/coins"
 )
 
 type CoinsHandler struct {
@@ -29,7 +30,8 @@ var (
 
 func TestCoinAmount_String(t *testing.T) {
 	bg := big.NewInt(1000)
-	amount := &coins.CoinAmount{bg, 0.00000004, "元", coins.CoinMicro}
+	amount := &coins.CoinAmount{bg, 0.00000004, coins.CoinMicro, &coins.CoinUnitPrec{}}
+
 	t.Log(amount.String())
 }
 
@@ -44,7 +46,7 @@ func TestBtcCoin_GetNewAmount(t *testing.T) {
 			"BTC",
 			coins.CoinOrdinary,
 		}
-		ca, err := handler.GetNewOrdinaryAmount("996123812.123123123")
+		ca, err := handler.NewCoinAmout("996123812.123123123")
 		if err != nil {
 			t.Error(err)
 			t.Fail()
