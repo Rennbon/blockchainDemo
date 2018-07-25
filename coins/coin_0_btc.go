@@ -46,3 +46,23 @@ func getBtcUnitName(cu CoinUnit) CoinUnitName {
 		return ""
 	}
 }
+func getBtcPrec(cu CoinUnit) int {
+	switch cu {
+	case CoinBilli:
+		return 17
+	case CoinMega:
+		return 14
+	case CoinKilo:
+		return 11
+	case CoinOrdinary:
+		return 8
+	case CoinMilli:
+		return 5
+	case CoinMicro:
+		return 2
+	case CoinBox:
+		return 0
+	default:
+		return -1
+	}
+}

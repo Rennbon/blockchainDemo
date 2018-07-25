@@ -35,7 +35,7 @@ func (ca *CoinAmount) String() string {
 	}
 	var buf bytes.Buffer
 	buf.WriteString(ca.IntPart.String())
-	//精度问题
+	//todo 精度问题，按不同币种来，这里实现有误
 	prec := int(math.Abs(float64(ca.CoinUnit)))
 	fstr := strconv.FormatFloat(ca.DecPart, 'f', prec, 64)
 	l := len(fstr)
