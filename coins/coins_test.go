@@ -43,8 +43,11 @@ func TestBtcCoin_GetNewAmount(t *testing.T) {
 		btresult := &coins.CoinAmount{
 			big.NewInt(996123812),
 			0.123123123,
-			"BTC",
 			coins.CoinOrdinary,
+			&coins.CoinUnitPrec{
+				8,
+				"BTC",
+			},
 		}
 		ca, err := handler.NewCoinAmout("996123812.123123123")
 		if err != nil {
@@ -69,9 +72,12 @@ func TestBtcCoin_ConvertAmountPrec(t *testing.T) {
 	case btcSerName:
 		ca := &coins.CoinAmount{
 			big.NewInt(996123812),
-			0.123,
-			"BTC",
+			0.123123123,
 			coins.CoinOrdinary,
+			&coins.CoinUnitPrec{
+				8,
+				"BTC",
+			},
 		}
 		caout, err := handler.ConvertAmountPrec(ca, coins.CoinMega)
 		if err != nil {
@@ -91,22 +97,28 @@ func BenchmarkBtcCoin_ConvertAmountPrec(b *testing.B) {
 	for i := 0; i < b.N; i++ { //use b.N for looping
 		btresult := &coins.CoinAmount{
 			big.NewInt(996123812),
-			0.12312312,
-			"BTC",
+			0.123123123,
 			coins.CoinOrdinary,
+			&coins.CoinUnitPrec{
+				8,
+				"BTC",
+			},
 		}
-		coins.ConvertcoinUnit1(btresult, coins.CoinBox, btc.GetBtcUnitName)
+		coins.ConvertcoinUnit1(btresult, coins.CoinBox, btc.GetUnitPrec)
 	}
 }
 
 func TestBtcCoin_GetNewOrdinaryAmount(t *testing.T) {
 	btresult := &coins.CoinAmount{
 		big.NewInt(996123812),
-		0.12312312,
-		"BTC",
+		0.123123123,
 		coins.CoinOrdinary,
+		&coins.CoinUnitPrec{
+			8,
+			"BTC",
+		},
 	}
-	caout, err := coins.ConvertcoinUnit1(btresult, coins.CoinBox, btc.GetBtcUnitName)
+	caout, err := coins.ConvertcoinUnit1(btresult, coins.CoinBox, btc.GetUnitPrec)
 	if err != nil {
 		t.Error(err)
 		t.Fail()

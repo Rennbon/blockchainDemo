@@ -163,4 +163,6 @@ type CoinAmounter interface {
 	//ca：当前coinAmount实体
 	//trgt:目标精度
 	ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit) (caout *CoinAmount, err error)
+	//获取精度及单位
+	GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec)
 }

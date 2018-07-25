@@ -18,14 +18,14 @@ func (b *BtcCoin) NewCoinAmout(num string) (ca *CoinAmount, err error) {
 	if err != nil {
 		return
 	}
-	return splitStrToNum(num, CoinOrdinary, getBtcUnitPrec)
+	return splitStrToNum(num, CoinOrdinary, b.GetUnitPrec)
 }
-func (*BtcCoin) ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit) (caout *CoinAmount, err error) {
-	return ConvertcoinUnit(ca, trgt, getBtcUnitPrec)
+func (b *BtcCoin) ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit) (caout *CoinAmount, err error) {
+	return ConvertcoinUnit(ca, trgt, b.GetUnitPrec)
 }
 
 
-func getBtcUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
+func (*BtcCoin)GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
 	switch cu {
 	case CoinBilli:
 		cup.UnitName = "BBTC"
