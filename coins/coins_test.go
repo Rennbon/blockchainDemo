@@ -1,11 +1,10 @@
 package coins_test
 
 import (
-	"fmt"
+	"github.com/Rennbon/blockchainDemo/coins"
 	"math/big"
 	"reflect"
 	"testing"
-	"github.com/Rennbon/blockchainDemo/coins"
 )
 
 type CoinsHandler struct {
@@ -22,53 +21,81 @@ func (ch *CoinsHandler) LoadService(g coins.CoinAmounter) error {
 	return nil
 }
 
-
-var btc *coins.BtcCoin
-var handler CoinsHandler
-
-
+var (
+	btc        *coins.BtcCoin
+	btcSerName = "*coins.BtcCoin"
+	handler    CoinsHandler
+)
 
 func TestCoinAmount_String(t *testing.T) {
 	bg := big.NewInt(1000)
 	amount := &coins.CoinAmount{bg, 0.00000004, "元", coins.CoinMicro}
-	fmt.Println(amount.String(true))
+	t.Log(amount.String(true))
 }
+
 //测试用例模板
 func TestBtcCoin_GetNewAmount(t *testing.T) {
 	handler.LoadService(btc)
 	switch handler.TypeName {
-	case "*coincore.BtcCoin":
-		btresult:=&coins.CoinAmount{
+	case btcSerName:
+		btresult := &coins.CoinAmount{
 			big.NewInt(996123812),
 			0.123123123,
 			"BTC",
 			coins.CoinOrdinary,
-
 		}
-		ca,err:= handler.GetNewOrdinaryAmount("996123812.123123123")
-		if err!=nil{
+		ca, err := handler.GetNewOrdinaryAmount("996123812.123123123")
+		if err != nil {
 			t.Error(err)
 			t.Fail()
 		}
-		if btresult.String(true) !=ca.String(true){
+		if btresult.String(true) != ca.String(true) {
 			t.Error("生成值错误")
 			t.Fail()
 		}
 		t.Log(ca)
 		break
-	case "*coincore.XlmCoin":
+	case "*coins.XlmCoin":
 		break
 	}
 }
 
+//测试用例模板
+func TestBtcCoin_ConvertAmountPrec(t *testing.T) {
+	handler.LoadService(btc)
+	switch handler.TypeName {
+	case btcSerName:
+		btresult := &coins.CoinAmount{
+			big.NewInt(996123812),
+			0.123123123,
+			"BTC",
+			coins.CoinOrdinary,
+		}
+		handler.ConvertAmountPrec(btresult, coins.CoinBox)
+		t.Log(btresult)
+		break
+	case "*coins.XlmCoin":
+		break
+	}
+}
+func BenchmarkBtcCoin_ConvertAmountPrec(b *testing.B) {
+	b.ReportAllocs()
+	btresult := &coins.CoinAmount{
+		big.NewInt(996123812),
+		0.123123123,
+		"BTC",
+		coins.CoinOrdinary,
+	}
+	coins.ConvertcoinUnit(btresult, coins.CoinOrdinary, btc.GetBtcUnitName)
+}
 
 //测试用例模板
 func Test(t *testing.T) {
 	handler.LoadService(btc)
 	switch handler.TypeName {
-	case "*coincore.BtcCoin":
+	case btcSerName:
 		break
-	case "*coincore.XlmCoin":
+	case "*coins.XlmCoin":
 		break
 	}
 }

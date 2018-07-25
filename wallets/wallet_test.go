@@ -1,12 +1,11 @@
 package wallets_test
 
 import (
-	"fmt"
+	"github.com/Rennbon/blockchainDemo/wallets"
 	"reflect"
 	"strconv"
 	"testing"
 	"time"
-	"github.com/Rennbon/blockchainDemo/wallets"
 )
 
 type CoinHandler struct {
@@ -23,9 +22,13 @@ func (ch *CoinHandler) LoadService(g wallets.Walleter) error {
 	return nil
 }
 
-var btc *wallets.BtcService
-var xlm *wallets.XlmService
-var handler CoinHandler
+var (
+	btc        *wallets.BtcService
+	btcStrName = "*wallets.BtcService"
+	xlm        *wallets.XlmService
+	xlmStrName = "*wallets.XlmService"
+	handler    CoinHandler
+)
 
 /* 相关接口
 GetNewAddress(string, AcountRunMode) (address, accountOut string, err error)
@@ -45,16 +48,16 @@ func TestGetNewAddress(t *testing.T) {
 		err     error
 	)
 	switch handler.TypeName {
-	case "*coins.BtcService":
+	case btcStrName:
 		address, account, err = handler.GetNewAddress("Test"+strconv.FormatInt(time.Now().Unix(), 10), wallets.AddrMode)
 		break
-	case "*coins.XlmService":
+	case xlmStrName:
 		address, account, err = handler.GetNewAddress("", wallets.AddrMode)
 	}
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Printf("address:%s\n\raccount:%s\n\r", address, account)
+	t.Logf("address:%s\n\raccount:%s\n\r", address, account)
 }
 
 //测试获取账户余额
@@ -65,10 +68,10 @@ func TestGetBalanceInAddress(t *testing.T) {
 		err     error
 	)
 	switch handler.TypeName {
-	case "*coins.BtcService":
+	case btcStrName:
 		balance, err = handler.GetBalanceInAddress("mhAfGecTPa9eZaaNkGJcV7fmUPFi3T2Ki8")
 		break
-	case "*coins.XlmService":
+	case xlmStrName:
 		balance, err = handler.GetBalanceInAddress("GD43TZONCLLNDHA5ALVRWZKMATTOKNLLTH3XTAJN6SQK77Q3ZT44QJJV")
 		break
 	}
@@ -76,7 +79,7 @@ func TestGetBalanceInAddress(t *testing.T) {
 		t.Error(err)
 	}
 	bal := strconv.FormatFloat(balance, 'f', 8, 64)
-	fmt.Println(bal)
+	t.Log(bal)
 }
 
 //测试账号到账号
@@ -87,10 +90,10 @@ func TestSendAddressToAddress(t *testing.T) {
 		err  error
 	)
 	switch handler.TypeName {
-	case "*coins.BtcService":
+	case btcStrName:
 		txId, err = handler.SendAddressToAddress("n4UYCTwXvJ7ijCC9ERGr7qYAuJbiLjUcwT", "mvY3JLZNZrvRewbgMZwvj9CHUJWtQeZjff", 10, 0.0001)
 		break
-	case "*coins.XlmService":
+	case xlmStrName:
 		txId, err = handler.SendAddressToAddress("n4UYCTwXvJ7ijCC9ERGr7qYAuJbiLjUcwT", "mvY3JLZNZrvRewbgMZwvj9CHUJWtQeZjff", 10, 0.0001)
 		break
 	}
@@ -98,7 +101,7 @@ func TestSendAddressToAddress(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Println(txId)
+	t.Log(txId)
 }
 
 //测试交易状态
@@ -108,10 +111,10 @@ func TestCheckTxMergerStatus(t *testing.T) {
 		err error
 	)
 	switch handler.TypeName {
-	case "*coins.BtcService":
+	case btcStrName:
 		err = handler.CheckTxMergerStatus("7f11a56ce356281ff5244ae57804da370c3cb0b685367088d10bf67be0a93f59")
 		break
-	case "*coins.XlmService":
+	case xlmStrName:
 		err = handler.CheckTxMergerStatus("5b410a62000da9d16fbffdc0b799b219599d6a303cadc6a00db821788f44c53e")
 		break
 	}
@@ -127,10 +130,10 @@ func TestCheckAddressExists(t *testing.T) {
 		err error
 	)
 	switch handler.TypeName {
-	case "*coins.BtcService":
+	case btcStrName:
 		err = handler.CheckAddressExists("046c9bbd1c67db7a99bb45a98c592ec89bffe65174ddd130395d632cb428f7423c3cc4de7d623bc4da321451ddede0e39e8bec0105103268e609cb175ea2fedf91")
 		break
-	case "*coins.XlmService":
+	case xlmStrName:
 		err = handler.CheckAddressExists("GD43TZONCLLNDHA5ALVRWZKMATTOKNLLTH3XTAJN6SQK77Q3ZT44QJJV")
 		break
 	}
@@ -143,9 +146,9 @@ func TestCheckAddressExists(t *testing.T) {
 func Test(t *testing.T) {
 	handler.LoadService(btc)
 	switch handler.TypeName {
-	case "*coins.BtcService":
+	case btcStrName:
 		break
-	case "*coins.XlmService":
+	case xlmStrName:
 		break
 	}
 }

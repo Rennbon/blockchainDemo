@@ -1,12 +1,10 @@
 package certs_test
 
 import (
-	"encoding/json"
 	"fmt"
-	"github.com/Rennbon/blockchainDemo/cert"
+	"github.com/Rennbon/blockchainDemo/certs"
 	"reflect"
 	"testing"
-	"github.com/Rennbon/blockchainDemo/certs"
 )
 
 type CertHandler struct {
@@ -23,9 +21,11 @@ func (ch *CertHandler) LoadService(g certs.Generater) error {
 	return nil
 }
 
-var btc *certs.BtcCertService
-var xlm *certs.XlmCertService
-var handler CertHandler
+var (
+	btc     *certs.BtcCertService
+	xlm     *certs.XlmCertService
+	handler CertHandler
+)
 
 func TestGenerateSimpleKey(t *testing.T) {
 	handler.LoadService(xlm)
@@ -33,8 +33,7 @@ func TestGenerateSimpleKey(t *testing.T) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	str, _ := json.Marshal(key)
-	fmt.Println(string(str))
+	t.Log(key)
 	//fmt.Printf("privatekey:%s\n\rpublickey:%s", key.PrivKey, key.PubKey)
 }
 func TestNewAddress(t *testing.T) {

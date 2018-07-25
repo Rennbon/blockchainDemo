@@ -76,40 +76,40 @@ func splitStrToNum(str string, cb CoinUnit, method getUnitName) (ca *CoinAmount,
 }
 
 //转换精度
-func convertcoinUnit(ca *CoinAmount, cb CoinUnit, method getUnitName) error {
+func ConvertcoinUnit(ca *CoinAmount, cb CoinUnit, method getUnitName) error {
 	if ca == nil {
 		return errors.ERR_Param_Fail
 	}
 	if ca.CoinUnit == cb {
 		return nil
 	}
-	//gap := cb - ca.CoinUnit
-	_ = ca.String(false)
-
-	/*	pow := math.Pow10(int(gap))
-		ln := big.NewInt(0)
-		if gap > 0 {
-			l := ln.Mul(ca.IntPart, big.NewInt(int64(pow)))
-			r := ca.DecPart * pow
-			if cb > 0 {
-				l.Add(l, big.NewInt(int64(r)))
-				ca.DecPart = 0
-			} else {
-				//取出decpart的整数部分累加到intpart
-				intr := math.Floor(r)
-				l.Add(l, big.NewInt(int64(intr)))
-				rstr := strconv.FormatFloat(r, 'f', int(math.Abs(float64(ca.CoinUnit))), 64)
-				_, rrstr, err := strtuil.SplitStrToNum(rstr)
-				if err != nil {
-					return err
-				}
-
-				ca.DecPart, _ = strconv.ParseFloat(rrstr, 64)
-			}
-			ca.IntPart = l
+	gap := cb - ca.CoinUnit
+	ln := big.NewInt(0)
+	if gap > 0 {
+		pow := math.Pow10(int(gap))
+		l := ln.Mul(ca.IntPart, big.NewInt(int64(pow)))
+		r := ca.DecPart * pow
+		if cb > 0 {
+			l.Add(l, big.NewInt(int64(r)))
+			ca.DecPart = 0
 		} else {
-			//intp 截取最后几位，补位到decp
-		}*/
+			//取出decpart的整数部分累加到intpart
+			intr := math.Floor(r)
+			l.Add(l, big.NewInt(int64(intr)))
+			rstr := strconv.FormatFloat(r, 'f', int(math.Abs(float64(ca.CoinUnit))), 64)
+			_, rrstr, err := strtuil.SplitStrToNum(rstr, false)
+			if err != nil {
+				return err
+			}
+
+			ca.DecPart, _ = strconv.ParseFloat(rrstr, 64)
+		}
+		ca.IntPart = l
+
+	} else {
+		//补位
+
+	}
 	return nil
 }
 

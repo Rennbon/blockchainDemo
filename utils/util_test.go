@@ -90,3 +90,11 @@ func TestStrUtil_MoveDecimalPosition(t *testing.T) {
 	}
 
 }
+func BenchmarkStrUtil_MoveDecimalPosition(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ { //use b.N for looping
+		str, _ := su.MoveDecimalPosition("12345.67890", -10, false)
+		if str == "" {
+		}
+	}
+}

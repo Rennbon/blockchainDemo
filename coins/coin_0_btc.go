@@ -14,7 +14,7 @@ func (*BtcCoin) GetNewOrdinaryAmount(num string) (ca *CoinAmount, err error) {
 	return splitStrToNum(num, CoinOrdinary, getBtcUnitName)
 }
 func (*BtcCoin) ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit) error {
-	return nil
+	return ConvertcoinUnit(ca, trgt, getBtcUnitName)
 }
 func getBtcUnitName(cu CoinUnit) CoinUnitName {
 	switch cu {
