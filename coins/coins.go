@@ -15,10 +15,11 @@ var strutil utils.StrUtil
 
 //接入币种实现接口
 type CoinAmounter interface {
+	FloatToCoinAmout(f float64) (*CoinAmount, error)
 	//获取新amount
 	//num:数值
 	//trgt：目标精度
-	NewCoinAmout(num string) (*CoinAmount, error)
+	StringToCoinAmout(num string) (*CoinAmount, error)
 	//转换amount精度
 	//ca：当前coinAmount实体
 	//trgt:目标精度
@@ -34,6 +35,7 @@ type CoinAmount struct {
 	IntPart  *big.Int //整数部分
 	DecPart  float64  //小数部分(整数不存值)
 	CoinUnit CoinUnit //单位精度
+	Z        *big.Int //Zero Pec Num 无精度整数，用于计算
 	*CoinUnitPrec
 }
 type CoinUnitPrec struct {
@@ -54,6 +56,9 @@ const (
 	CoinBox      CoinUnit = -8
 )
 
+func (ca *CoinAmount) Add(amount *CoinAmount) {
+
+}
 func (ca *CoinAmount) String() string {
 	if &ca == nil {
 		return ""
@@ -69,7 +74,7 @@ func (ca *CoinAmount) String() string {
 }
 
 //转换string类型数字为整数部分和小数部分
-func splitStrToNum(str string, cb CoinUnit, gupfunc getUnitPrec) (ca *CoinAmount, err error) {
+func splitStrToNum(str string, cb CoinUnit, gupfunc getUnitPrec, origin CoinUnit) (ca *CoinAmount, err error) {
 	l, r, err := strutil.SplitStrToNum(str, false)
 	if err != nil {
 		return
@@ -84,17 +89,27 @@ func splitStrToNum(str string, cb CoinUnit, gupfunc getUnitPrec) (ca *CoinAmount
 		err = errors.ERR_PARAM_FAIL
 		return
 	}
+	buff := &bytes.Buffer{}
+	buff.WriteString(l)
 	if r != "" {
 		r = "0." + r
+		buff.WriteString(r)
 		if ca.DecPart, err = strconv.ParseFloat(r, 64); err != nil {
 			return
 		}
 	}
+	gap := int(cb - origin)
+	if gap > 0 {
+		for i := 0; i < gap; i++ {
+			buff.WriteString("0")
+		}
+	}
+	ca.Z.SetString(buff.String(), 10)
 	return
 }
 
 //性能测试效率较低
-func convertCoinUnit1(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *CoinAmount, err error) {
+func convertCoinUnit1(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec, origin CoinUnit) (caout *CoinAmount, err error) {
 	if ca == nil {
 		err = errors.ERR_PARAM_FAIL
 		return
@@ -108,7 +123,7 @@ func convertCoinUnit1(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *
 	if err != nil {
 		return
 	}
-	caout, err = splitStrToNum(newnum, cb, gupfunc)
+	caout, err = splitStrToNum(newnum, cb, gupfunc, origin)
 	return
 }
 
@@ -124,6 +139,7 @@ func convertCoinUnit(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *C
 		return
 	}
 	caout = &CoinAmount{
+		Z:            ca.Z,
 		CoinUnitPrec: gupfunc(cb),
 	}
 	gap := int(cb - ca.CoinUnit)

@@ -50,7 +50,7 @@ func TestCoinAmount_String(t *testing.T) {
 //测试用例模板
 func Test_GetNewAmount(t *testing.T) {
 	handler.LoadService(xlm)
-	ca, err := handler.NewCoinAmout("996123812.123123123")
+	ca, err := handler.StringToCoinAmout("996123812.123123123")
 	if err != nil {
 		t.Error(err)
 		t.Fail()

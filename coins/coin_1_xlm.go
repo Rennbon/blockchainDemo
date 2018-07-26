@@ -1,17 +1,22 @@
 package coins
 
+import "strconv"
+
 type XmlCoin struct {
 }
 
-func (xc *XmlCoin) NewCoinAmout(num string) (ca *CoinAmount, err error) {
+func (c *XmlCoin) FloatToCoinAmout(f float64) (*CoinAmount, error) {
+	return c.praseCoinAmount(strconv.FormatFloat(f, 'f', 8, 64))
+}
+func (c *XmlCoin) StringToCoinAmout(num string) (ca *CoinAmount, err error) {
 	err = regutil.CanPraseBigFloat(num)
 	if err != nil {
 		return
 	}
-	return splitStrToNum(num, CoinOrdinary, xc.GetUnitPrec)
+	return c.praseCoinAmount(num)
 }
-func (xc *XmlCoin) ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit) (caout *CoinAmount, err error) {
-	return convertCoinUnit(ca, trgt, xc.GetUnitPrec)
+func (c *XmlCoin) ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit) (caout *CoinAmount, err error) {
+	return convertCoinUnit(ca, trgt, c.GetUnitPrec)
 }
 
 /*
@@ -49,4 +54,7 @@ func (*XmlCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
 	default:
 		return
 	}
+}
+func (c *XmlCoin) praseCoinAmount(num string) (ca *CoinAmount, err error) {
+	return splitStrToNum(num, CoinOrdinary, c.GetUnitPrec, CoinMicro)
 }

@@ -9,6 +9,8 @@ import (
 	"github.com/Rennbon/blockchainDemo/errors"
 	"log"
 
+	"github.com/Rennbon/blockchainDemo/certs"
+	"github.com/Rennbon/blockchainDemo/coins"
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/btcjson"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -17,7 +19,6 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
-	"github.com/Rennbon/blockchainDemo/certs"
 )
 
 type BtcService struct {
@@ -55,6 +56,7 @@ func initBtcClinet(conf *config.BtcConf) {
 }
 
 var (
+	btcCoin *coins.BtcCoin
 	certSrv certs.BtcCertService
 	//环境变量
 	btcClient *rpcclient.Client
@@ -102,13 +104,18 @@ func (*BtcService) CheckAddressExists(pubKey string) error {
 }
 
 //获取账户余额
-func (*BtcService) GetBalanceInAddress(address string) (balance float64, err error) {
+func (*BtcService) GetBalanceInAddress(address string) (balance *coins.CoinAmount, err error) {
 	unspents, err := getUnspentByAddress(address)
 	if err != nil {
 		return
 	}
 	for _, v := range unspents {
-		balance += v.Amount
+		//todo 这里没改完，coinamount需要增加相加相减的方法
+		//balance += v.Amount
+		balance, err = btcCoin.FloatToCoinAmout(v.Amount)
+		if err != nil {
+			return
+		}
 	}
 	return
 }

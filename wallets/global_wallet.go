@@ -1,6 +1,7 @@
 package wallets
 
 import (
+	"github.com/Rennbon/blockchainDemo/coins"
 	"github.com/Rennbon/blockchainDemo/database"
 )
 
@@ -25,7 +26,7 @@ type Walleter interface {
 	//生成新地址并导入到共链
 	GetNewAddress(string, AcountRunMode) (address, accountOut string, err error)
 	//获取指定地址的余额
-	GetBalanceInAddress(string) (balance float64, err error)
+	GetBalanceInAddress(string) (balance *coins.CoinAmount, err error)
 	//账户转钱到账户
 	//
 	SendAddressToAddress(addrFrom, addrTo string, transfer, fee float64) (txId string, err error)

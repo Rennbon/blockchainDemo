@@ -1,19 +1,23 @@
 package coins
 
+import "strconv"
+
 type BtcCoin struct {
+	Orgin CoinUnit
 }
 
-const btcPrec int64 = 1e8
-
-func (b *BtcCoin) NewCoinAmout(num string) (ca *CoinAmount, err error) {
+func (c *BtcCoin) FloatToCoinAmout(f float64) (*CoinAmount, error) {
+	return c.praseCoinAmount(strconv.FormatFloat(f, 'f', 8, 64))
+}
+func (c *BtcCoin) StringToCoinAmout(num string) (ca *CoinAmount, err error) {
 	err = regutil.CanPraseBigFloat(num)
 	if err != nil {
 		return
 	}
-	return splitStrToNum(num, CoinOrdinary, b.GetUnitPrec)
+	return c.praseCoinAmount(num)
 }
-func (b *BtcCoin) ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit) (caout *CoinAmount, err error) {
-	return convertCoinUnit(ca, trgt, b.GetUnitPrec)
+func (c *BtcCoin) ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit) (caout *CoinAmount, err error) {
+	return convertCoinUnit(ca, trgt, c.GetUnitPrec)
 }
 
 func (*BtcCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
@@ -50,4 +54,7 @@ func (*BtcCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
 	default:
 		return
 	}
+}
+func (c *BtcCoin) praseCoinAmount(num string) (ca *CoinAmount, err error) {
+	return splitStrToNum(num, CoinOrdinary, c.GetUnitPrec, CoinBox)
 }
