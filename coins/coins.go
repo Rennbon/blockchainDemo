@@ -48,6 +48,8 @@ const (
 func (ca *CoinAmount) Add(amount *CoinAmount) {
 
 }
+
+//todo 最低精度传参需要加，哎，看到源码的先忽略这边
 func (ca *CoinAmount) String() string {
 	if &ca == nil {
 		return ""
