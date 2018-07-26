@@ -10,20 +10,11 @@ import (
 
 type CoinsHandler struct {
 	coins.CoinAmounter
+	*coins.CoinAmount
 	TypeName string
 }
 
 ////////////////////测试用实体/////////////////////////////
-
-var simpleca = &coins.CoinAmount{
-	big.NewInt(996123812),
-	0.123123123,
-	coins.CoinOrdinary,
-	&coins.CoinUnitPrec{
-		8,
-		"BTC",
-	},
-}
 
 //////////////////////////////////////////////////
 
@@ -33,59 +24,56 @@ func (ch *CoinsHandler) LoadService(g coins.CoinAmounter) error {
 	}
 	typ := reflect.TypeOf(g)
 	ch.TypeName = typ.String()
+	ch.CoinAmount = &coins.CoinAmount{
+		IntPart:      big.NewInt(996123812),
+		DecPart:      0.123123123,
+		CoinUnit:     coins.CoinOrdinary,
+		CoinUnitPrec: g.GetUnitPrec(coins.CoinOrdinary),
+	}
 	return nil
 }
 
 var (
 	btc        *coins.BtcCoin
 	btcSerName = "*coins.BtcCoin"
+	xlm        *coins.XmlCoin
+	xlmSerName = "*coins.XmlCoin"
 	handler    CoinsHandler
 )
 
 //prec会约束DecPart的float精度
 func TestCoinAmount_String(t *testing.T) {
-	t.Log(simpleca.String())
+	handler.LoadService(xlm)
+	t.Log(handler.CoinAmount.String())
 }
 
 //测试用例模板
 func Test_GetNewAmount(t *testing.T) {
-	handler.LoadService(btc)
-	switch handler.TypeName {
-	case btcSerName:
-		ca, err := handler.NewCoinAmout("996123812.123123123")
-		if err != nil {
-			t.Error(err)
-			t.Fail()
-		}
-		if simpleca.String() != ca.String() {
-			t.Error("生成值错误")
-			t.Fail()
-		}
-		t.Log(ca)
-		break
-	case "*coins.XlmCoin":
-		break
+	handler.LoadService(xlm)
+	ca, err := handler.NewCoinAmout("996123812.123123123")
+	if err != nil {
+		t.Error(err)
+		t.Fail()
 	}
+	if handler.CoinAmount.String() != ca.String() {
+		t.Error("生成值错误")
+		t.Fail()
+	}
+	t.Log(ca)
 }
 
 //测试用例模板
 func Test_ConvertAmountPrec(t *testing.T) {
-	handler.LoadService(btc)
-	switch handler.TypeName {
-	case btcSerName:
-		caout, err := handler.ConvertAmountPrec(simpleca, coins.CoinMicro)
-		if err != nil {
-			t.Error(err)
-			t.Fail()
-		} else {
-			t.Log("\r\n原始:", simpleca.String(), "\r\n小数点精度prec:", simpleca.Prec, "\r\n单位:", simpleca.UnitName)
-			t.Log("\r\n转变:", caout.String(), "\r\n小数点精度prec:", caout.Prec, "\r\n单位:", caout.UnitName)
-		}
-
-		break
-	case "*coins.XlmCoin":
-		break
+	handler.LoadService(xlm)
+	caout, err := handler.ConvertAmountPrec(handler.CoinAmount, coins.CoinMicro)
+	if err != nil {
+		t.Error(err)
+		t.Fail()
+	} else {
+		t.Log("\r\n原始:", handler.CoinAmount.String(), "\r\n小数点精度prec:", handler.CoinAmount.Prec, "\r\n单位:", handler.CoinAmount.UnitName)
+		t.Log("\r\n转变:", caout.String(), "\r\n小数点精度prec:", caout.Prec, "\r\n单位:", caout.UnitName)
 	}
+
 }
 
 //测试用例模板
@@ -94,7 +82,7 @@ func Test(t *testing.T) {
 	switch handler.TypeName {
 	case btcSerName:
 		break
-	case "*coins.XlmCoin":
+	case xlmSerName:
 		break
 	}
 }

@@ -1,18 +1,12 @@
 package coins
 
-import (
-	"github.com/Rennbon/blockchainDemo/utils"
-)
-
 type BtcCoin struct {
 }
-
-var regSer utils.RegUtil
 
 const btcPrec int64 = 1e8
 
 func (b *BtcCoin) NewCoinAmout(num string) (ca *CoinAmount, err error) {
-	err = regSer.CanPraseBigFloat(num)
+	err = regutil.CanPraseBigFloat(num)
 	if err != nil {
 		return
 	}

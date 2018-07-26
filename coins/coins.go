@@ -10,6 +10,23 @@ import (
 	"github.com/Rennbon/blockchainDemo/utils"
 )
 
+var regutil utils.RegUtil
+var strutil utils.StrUtil
+
+//接入币种实现接口
+type CoinAmounter interface {
+	//获取新amount
+	//num:数值
+	//trgt：目标精度
+	NewCoinAmout(num string) (*CoinAmount, error)
+	//转换amount精度
+	//ca：当前coinAmount实体
+	//trgt:目标精度
+	ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit) (caout *CoinAmount, err error)
+	//获取精度及单位
+	GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec)
+}
+
 //代币单位
 type CoinUnitName string
 type CoinUnit int8
@@ -20,11 +37,13 @@ type CoinAmount struct {
 	*CoinUnitPrec
 }
 type CoinUnitPrec struct {
-	Prec     int
+	Prec     int          //小数精度
 	UnitName CoinUnitName //单位字符串
 
 }
 
+//单位层次，普通单位上下各三层，一共七层
+//如果碰到不够的再加
 const (
 	CoinBilli    CoinUnit = 9
 	CoinMega     CoinUnit = 6
@@ -49,11 +68,9 @@ func (ca *CoinAmount) String() string {
 	return buf.String()
 }
 
-var strtuil utils.StrUtil
-
 //转换string类型数字为整数部分和小数部分
 func splitStrToNum(str string, cb CoinUnit, gupfunc getUnitPrec) (ca *CoinAmount, err error) {
-	l, r, err := strtuil.SplitStrToNum(str, false)
+	l, r, err := strutil.SplitStrToNum(str, false)
 	if err != nil {
 		return
 	}
@@ -76,8 +93,7 @@ func splitStrToNum(str string, cb CoinUnit, gupfunc getUnitPrec) (ca *CoinAmount
 	return
 }
 
-//7978 ns/op	    2976 B/op	      87 allocs/op
-//效率比较低
+//性能测试效率较低
 func convertCoinUnit1(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *CoinAmount, err error) {
 	if ca == nil {
 		err = errors.ERR_PARAM_FAIL
@@ -88,7 +104,7 @@ func convertCoinUnit1(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *
 		return
 	}
 	gap := int(cb) - int(ca.CoinUnit)
-	newnum, err := strtuil.MoveDecimalPosition(ca.String(), gap, false)
+	newnum, err := strutil.MoveDecimalPosition(ca.String(), gap, false)
 	if err != nil {
 		return
 	}
@@ -96,7 +112,6 @@ func convertCoinUnit1(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *
 	return
 }
 
-// 3531 ns/op	    1728 B/op	      50 allocs/op
 //转换精度
 //效率比convertCoinUnit1相对高
 func convertCoinUnit(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *CoinAmount, err error) {
@@ -154,7 +169,7 @@ func convertCoinUnit(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *C
 			intr := math.Floor(r)
 			ln.Add(ln, big.NewInt(int64(intr)))
 			rstr := strconv.FormatFloat(r, 'f', ca.Prec, 64) //只需保留原来的prec就行
-			_, rrstr, errinner := strtuil.SplitStrToNum(rstr, false)
+			_, rrstr, errinner := strutil.SplitStrToNum(rstr, false)
 			if errinner != nil {
 				err = errinner
 				return
@@ -168,17 +183,3 @@ func convertCoinUnit(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *C
 }
 
 type getUnitPrec func(cu CoinUnit) (cup *CoinUnitPrec)
-
-//接入币种实现接口
-type CoinAmounter interface {
-	//获取新amount
-	//num:数值
-	//trgt：目标精度
-	NewCoinAmout(num string) (*CoinAmount, error)
-	//转换amount精度
-	//ca：当前coinAmount实体
-	//trgt:目标精度
-	ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit) (caout *CoinAmount, err error)
-	//获取精度及单位
-	GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec)
-}
