@@ -13,6 +13,20 @@ type CoinsHandler struct {
 	TypeName string
 }
 
+////////////////////测试用实体/////////////////////////////
+
+var simpleca = &coins.CoinAmount{
+	big.NewInt(996123812),
+	0.123123123,
+	coins.CoinOrdinary,
+	&coins.CoinUnitPrec{
+		8,
+		"BTC",
+	},
+}
+
+//////////////////////////////////////////////////
+
 func (ch *CoinsHandler) LoadService(g coins.CoinAmounter) error {
 	if g != nil {
 		ch.CoinAmounter = g
@@ -40,21 +54,12 @@ func TestBtcCoin_GetNewAmount(t *testing.T) {
 	handler.LoadService(btc)
 	switch handler.TypeName {
 	case btcSerName:
-		btresult := &coins.CoinAmount{
-			big.NewInt(996123812),
-			0.123123123,
-			coins.CoinOrdinary,
-			&coins.CoinUnitPrec{
-				8,
-				"BTC",
-			},
-		}
 		ca, err := handler.NewCoinAmout("996123812.123123123")
 		if err != nil {
 			t.Error(err)
 			t.Fail()
 		}
-		if btresult.String() != ca.String() {
+		if simpleca.String() != ca.String() {
 			t.Error("生成值错误")
 			t.Fail()
 		}
@@ -70,16 +75,7 @@ func TestBtcCoin_ConvertAmountPrec(t *testing.T) {
 	handler.LoadService(btc)
 	switch handler.TypeName {
 	case btcSerName:
-		ca := &coins.CoinAmount{
-			big.NewInt(996123812),
-			0.123123123,
-			coins.CoinOrdinary,
-			&coins.CoinUnitPrec{
-				8,
-				"BTC",
-			},
-		}
-		caout, err := handler.ConvertAmountPrec(ca, coins.CoinMega)
+		caout, err := handler.ConvertAmountPrec(simpleca, coins.CoinMega)
 		if err != nil {
 			t.Error(err)
 			t.Fail()
@@ -95,30 +91,12 @@ func TestBtcCoin_ConvertAmountPrec(t *testing.T) {
 func BenchmarkBtcCoin_ConvertAmountPrec(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ { //use b.N for looping
-		btresult := &coins.CoinAmount{
-			big.NewInt(996123812),
-			0.123123123,
-			coins.CoinOrdinary,
-			&coins.CoinUnitPrec{
-				8,
-				"BTC",
-			},
-		}
-		coins.ConvertcoinUnit1(btresult, coins.CoinBox, btc.GetUnitPrec)
+		coins.ConvertcoinUnit1(simpleca, coins.CoinBox, btc.GetUnitPrec)
 	}
 }
 
 func TestBtcCoin_GetNewOrdinaryAmount(t *testing.T) {
-	btresult := &coins.CoinAmount{
-		big.NewInt(996123812),
-		0.123123123,
-		coins.CoinOrdinary,
-		&coins.CoinUnitPrec{
-			8,
-			"BTC",
-		},
-	}
-	caout, err := coins.ConvertcoinUnit1(btresult, coins.CoinBox, btc.GetUnitPrec)
+	caout, err := coins.ConvertcoinUnit1(simpleca, coins.CoinBox, btc.GetUnitPrec)
 	if err != nil {
 		t.Error(err)
 		t.Fail()

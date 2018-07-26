@@ -7,6 +7,23 @@ import (
 
 var su utils.StrUtil
 
+/////////////////////测试用实体///////////////////////////
+type testModle struct {
+	from, to, target string
+	gap, index       int
+}
+
+var slc = []testModle{
+	{index: 0, target: "前移2位不溢出", from: "12345.6789", to: "123.456789", gap: 2},
+	{index: 1, target: "后移2位不溢出", from: "12345.6789", to: "1234567.89", gap: -2},
+	{index: 2, target: "前移10位溢出补0", from: "12345.6789", to: "0.00000123456789", gap: 10},
+	{index: 3, target: "后移10位溢出补0，无小数点", from: "12345.6789", to: "123456789000000", gap: -10},
+	{index: 4, target: "前移正好", from: "12345.6789", to: "0.123456789", gap: 5},
+	{index: 5, target: "后移正好", from: "12345.6789", to: "123456789", gap: -4},
+}
+
+////////////////////////////////////////////////////////
+
 func TestStrUtil_SplitStrToNum(t *testing.T) {
 	resmap := map[string]bool{
 		"12312312332":                           true,
@@ -40,46 +57,6 @@ func BenchmarkStrUtil_SplitStrToNum(b *testing.B) {
 }
 
 func TestStrUtil_MoveDecimalPosition(t *testing.T) {
-	slc := make([]struct {
-		from, to, target string
-		gap, index       int
-	}, 6, 6)
-	slc[0].index = 0
-	slc[0].target = "前移2位不溢出"
-	slc[0].from = "12345.6789"
-	slc[0].to = "123.456789"
-	slc[0].gap = 2
-
-	slc[1].index = 1
-	slc[1].target = "后移2位不溢出"
-	slc[1].from = "12345.6789"
-	slc[1].to = "1234567.89"
-	slc[1].gap = -2
-
-	slc[2].index = 2
-	slc[2].target = "前移10位溢出补0"
-	slc[2].from = "12345.6789"
-	slc[2].to = "0.00000123456789"
-	slc[2].gap = 10
-
-	slc[3].index = 3
-	slc[3].target = "后移10位溢出补0，无小数点"
-	slc[3].from = "12345.6789"
-	slc[3].to = "123456789000000"
-	slc[3].gap = -10
-
-	slc[4].index = 4
-	slc[4].target = "前移正好"
-	slc[4].from = "12345.6789"
-	slc[4].to = "0.123456789"
-	slc[4].gap = 5
-
-	slc[5].index = 5
-	slc[5].target = "后移正好"
-	slc[5].from = "12345.6789"
-	slc[5].to = "123456789"
-	slc[5].gap = -4
-
 	for k, v := range slc {
 		/*if k != 4 {
 			continue
