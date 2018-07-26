@@ -48,7 +48,7 @@ func moveDecimalPosition(str string, gap int, strCheck bool) (newstr string, err
 			return
 		}
 	}
-	//这个方法会用的比较多，合并内存
+	//这个方法会用的比较多，内部变量合并，会稍微快100ns/op
 	tmp := struct {
 		curIdx, strLen, spliIdx, overflow int
 		strNoPoint                        string
@@ -61,12 +61,6 @@ func moveDecimalPosition(str string, gap int, strCheck bool) (newstr string, err
 		strings.Replace(str, ".", "", 1),
 		new(bytes.Buffer),
 	}
-	/*curIdx := strings.Index(str, ".")
-	strLen := len(str)
-	strNoPoint := strings.Replace(str, ".", "", 1)
-	buffer := new(bytes.Buffer)
-	spliIdx := 0
-	overflow := 0*/
 	//左移右移可能超过len上限
 	if gap > 0 {
 		//<-

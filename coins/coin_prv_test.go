@@ -39,25 +39,30 @@ var slcTarget = []*CoinAmount{
 
 var gup = &BtcCoin{}
 
+/**
+516 ns/op	     280 B/op	       8 allocs/op
+483 ns/op	     280 B/op	       8 allocs/op
+642 ns/op	     352 B/op	      10 allocs/op
+4.81 ns/op	       0 B/op	       0 allocs/op
+1007 ns/op	     400 B/op	      12 allocs/op
+816 ns/op	     400 B/op	      12 allocs/op
+733 ns/op	     416 B/op	      12 allocs/op
+总： 4694 ns/op	    2128 B/op	      62 allocs/op
+*/
 func Benchmark_ConvertcoinUnit(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		for k, v := range slcTarget {
-			if k == 4 {
-				continue
-			}
+		for _, v := range slcTarget {
 			convertCoinUnit(orgnca, v.CoinUnit, gup.GetUnitPrec)
 		}
 	}
 }
 
+//8790 ns/op	    3584 B/op	     105 allocs/op
 func Benchmark_ConvertcoinUnit1(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		for k, v := range slcTarget {
-			if k == 4 {
-				continue
-			}
+		for _, v := range slcTarget {
 			convertCoinUnit1(orgnca, v.CoinUnit, gup.GetUnitPrec)
 		}
 	}
@@ -65,9 +70,9 @@ func Benchmark_ConvertcoinUnit1(b *testing.B) {
 
 func TestConvertCoinUnit(t *testing.T) {
 	for k, v := range slcTarget {
-		if k == 4 {
+		/*if k != 4 {
 			continue
-		}
+		}*/
 		caout, err := convertCoinUnit(orgnca, v.CoinUnit, gup.GetUnitPrec)
 		if err != nil {
 			t.Error(err)
@@ -81,9 +86,6 @@ func TestConvertCoinUnit(t *testing.T) {
 }
 func TestConvertCoinUnit1(t *testing.T) {
 	for k, v := range slcTarget {
-		if k == 4 {
-			continue
-		}
 		caout, err := convertCoinUnit1(orgnca, v.CoinUnit, gup.GetUnitPrec)
 		if err != nil {
 			t.Error(err)

@@ -75,7 +75,10 @@ func splitStrToNum(str string, cb CoinUnit, gupfunc getUnitPrec) (ca *CoinAmount
 	}
 	return
 }
-func convertCoinUnit(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *CoinAmount, err error) {
+
+//7978 ns/op	    2976 B/op	      87 allocs/op
+//效率比较低
+func convertCoinUnit1(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *CoinAmount, err error) {
 	if ca == nil {
 		err = errors.ERR_PARAM_FAIL
 		return
@@ -93,8 +96,10 @@ func convertCoinUnit(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *C
 	return
 }
 
+// 3531 ns/op	    1728 B/op	      50 allocs/op
 //转换精度
-func convertCoinUnit1(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *CoinAmount, err error) {
+//效率比convertCoinUnit1相对高
+func convertCoinUnit(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *CoinAmount, err error) {
 	if ca == nil {
 		err = errors.ERR_PARAM_FAIL
 		return
@@ -103,9 +108,10 @@ func convertCoinUnit1(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *
 		caout = ca
 		return
 	}
-	caout = &CoinAmount{}
+	caout = &CoinAmount{
+		CoinUnitPrec: gupfunc(cb),
+	}
 	gap := int(cb - ca.CoinUnit)
-	ln := big.NewInt(0)
 	if gap > 0 {
 		//往左边移动
 		lstr := ca.IntPart.String() //int部分全部字符串
@@ -137,27 +143,27 @@ func convertCoinUnit1(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *
 		gap = -gap
 		pow := math.Pow10(int(gap))
 		//补位
-		l := ln.Mul(ca.IntPart, big.NewInt(int64(pow)))
+		ln := big.NewInt(0)
+		ln = ln.Mul(ca.IntPart, big.NewInt(int64(pow)))
 		r := ca.DecPart * pow
 		if cb > 0 {
-			l.Add(l, big.NewInt(int64(r)))
+			ln.Add(ln, big.NewInt(int64(r)))
 			caout.DecPart = 0
 		} else {
 			//取出decpart的整数部分累加到intpart
 			intr := math.Floor(r)
-			l.Add(l, big.NewInt(int64(intr)))
-			rstr := strconv.FormatFloat(r, 'f', int(math.Abs(float64(ca.CoinUnit))), 64)
+			ln.Add(ln, big.NewInt(int64(intr)))
+			rstr := strconv.FormatFloat(r, 'f', ca.Prec, 64) //只需保留原来的prec就行
 			_, rrstr, errinner := strtuil.SplitStrToNum(rstr, false)
 			if errinner != nil {
 				err = errinner
 				return
 			}
-			caout.DecPart, _ = strconv.ParseFloat(rrstr, 64)
+			caout.DecPart, _ = strconv.ParseFloat("0."+rrstr, 64)
 		}
-		caout.IntPart = l
+		caout.IntPart = ln
 	}
 	caout.CoinUnit = cb
-	caout.CoinUnitPrec = gupfunc(cb)
 	return
 }
 

@@ -74,9 +74,13 @@ func TestStrUtil_MoveDecimalPosition(t *testing.T) {
 	}
 
 }
+
 func BenchmarkStrUtil_MoveDecimalPosition(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ { //use b.N for looping
-		su.MoveDecimalPosition("12345.12345", 10, false)
+		for _, v := range slc {
+			su.MoveDecimalPosition(v.from, v.gap, false)
+
+		}
 	}
 }
