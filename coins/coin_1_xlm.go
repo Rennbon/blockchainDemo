@@ -15,9 +15,6 @@ func (c *XmlCoin) StringToCoinAmout(num string) (ca *CoinAmount, err error) {
 	}
 	return c.praseCoinAmount(num)
 }
-func (c *XmlCoin) ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit) (caout *CoinAmount, err error) {
-	return convertCoinUnit(ca, trgt, c.GetUnitPrec)
-}
 
 /*
 	0.000001
@@ -56,5 +53,5 @@ func (*XmlCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
 	}
 }
 func (c *XmlCoin) praseCoinAmount(num string) (ca *CoinAmount, err error) {
-	return splitStrToNum(num, CoinOrdinary, c.GetUnitPrec, CoinMicro)
+	return stringToAmount(num, CoinOrdinary, c.GetUnitPrec, CoinMicro)
 }

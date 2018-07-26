@@ -1,11 +1,6 @@
 package coins
 
-import (
-	"math/big"
-	"testing"
-)
-
-var simpleca = &CoinAmount{
+/*var simpleca = &CoinAmount{
 	big.NewInt(996123812),
 	0.12312312,
 	CoinOrdinary,
@@ -15,7 +10,7 @@ var simpleca = &CoinAmount{
 	},
 }
 var orgnca = &CoinAmount{big.NewInt(12345), 0.6789, CoinOrdinary, &CoinUnitPrec{8, "BTC"}}
-
+*/
 /**
 目标
 	CoinUnit     const    	    name 	prec gap
@@ -27,7 +22,7 @@ var orgnca = &CoinAmount{big.NewInt(12345), 0.6789, CoinOrdinary, &CoinUnitPrec{
 	CoinMicro    CoinUnit = -6  μBTC 	2   -6
 	CoinBox      CoinUnit = -8  Satoshi 0 	-8
 */
-var slcTarget = []*CoinAmount{
+/*var slcTarget = []*CoinAmount{
 	{big.NewInt(0), 0.0000123456789, CoinBilli, &CoinUnitPrec{17, "BBTC"}},
 	{big.NewInt(0), 0.0123456789, CoinMega, &CoinUnitPrec{14, "MBTC"}},
 	{big.NewInt(12), 0.3456789, CoinKilo, &CoinUnitPrec{11, "KBTC"}},
@@ -37,7 +32,7 @@ var slcTarget = []*CoinAmount{
 	{big.NewInt(1234567890000), 0, CoinBox, &CoinUnitPrec{0, "Satoshi"}},
 }
 
-var gup = &BtcCoin{}
+var gup = &BtcCoin{}*/
 
 /**
 516 ns/op	     280 B/op	       8 allocs/op
@@ -49,7 +44,7 @@ var gup = &BtcCoin{}
 733 ns/op	     416 B/op	      12 allocs/op
 总： 4694 ns/op	    2128 B/op	      62 allocs/op
 */
-func Benchmark_ConvertcoinUnit(b *testing.B) {
+/*func Benchmark_ConvertcoinUnit(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		for _, v := range slcTarget {
@@ -57,9 +52,9 @@ func Benchmark_ConvertcoinUnit(b *testing.B) {
 		}
 	}
 }
-
+*/
 //8790 ns/op	    3584 B/op	     105 allocs/op
-func Benchmark_ConvertcoinUnit1(b *testing.B) {
+/*func Benchmark_ConvertcoinUnit1(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		for _, v := range slcTarget {
@@ -67,12 +62,12 @@ func Benchmark_ConvertcoinUnit1(b *testing.B) {
 		}
 	}
 }
-
-func TestConvertCoinUnit(t *testing.T) {
+*/
+/*func TestConvertCoinUnit(t *testing.T) {
 	for k, v := range slcTarget {
-		/*if k != 4 {
+		if k != 4 {
 			continue
-		}*/
+		}
 		caout, err := convertCoinUnit(orgnca, v.CoinUnit, gup.GetUnitPrec)
 		if err != nil {
 			t.Error(err)
@@ -83,8 +78,8 @@ func TestConvertCoinUnit(t *testing.T) {
 			t.Logf("测试成功,下标：%d\r\n原文参数:%s\r\n预期结果:%s\r\n实际结果:%s\r\n", k, orgnca.String(), v.String(), caout.String())
 		}
 	}
-}
-func TestConvertCoinUnit1(t *testing.T) {
+}*/
+/*func TestConvertCoinUnit1(t *testing.T) {
 	for k, v := range slcTarget {
 		caout, err := convertCoinUnit1(orgnca, v.CoinUnit, gup.GetUnitPrec)
 		if err != nil {
@@ -98,3 +93,4 @@ func TestConvertCoinUnit1(t *testing.T) {
 	}
 
 }
+*/

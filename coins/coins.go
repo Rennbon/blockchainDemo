@@ -2,12 +2,9 @@ package coins
 
 import (
 	"bytes"
-	"math"
-	"math/big"
-	"strconv"
-
 	"github.com/Rennbon/blockchainDemo/errors"
 	"github.com/Rennbon/blockchainDemo/utils"
+	"math/big"
 )
 
 var regutil utils.RegUtil
@@ -20,10 +17,6 @@ type CoinAmounter interface {
 	//num:数值
 	//trgt：目标精度
 	StringToCoinAmout(num string) (*CoinAmount, error)
-	//转换amount精度
-	//ca：当前coinAmount实体
-	//trgt:目标精度
-	ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit) (caout *CoinAmount, err error)
 	//获取精度及单位
 	GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec)
 }
@@ -32,16 +25,12 @@ type CoinAmounter interface {
 type CoinUnitName string
 type CoinUnit int8
 type CoinAmount struct {
-	IntPart  *big.Int //整数部分
-	DecPart  float64  //小数部分(整数不存值)
-	CoinUnit CoinUnit //单位精度
-	Z        *big.Int //Zero Pec Num 无精度整数，用于计算
-	*CoinUnitPrec
+	Amount        *big.Int //基本代币开始计算，为正整数，如比特币的聪，最基本单位
+	*CoinUnitPrec          //默认tostring的单位
 }
 type CoinUnitPrec struct {
 	Prec     int          //小数精度
 	UnitName CoinUnitName //单位字符串
-
 }
 
 //单位层次，普通单位上下各三层，一共七层
@@ -63,16 +52,51 @@ func (ca *CoinAmount) String() string {
 	if &ca == nil {
 		return ""
 	}
-	var buf bytes.Buffer
+	str := ca.Amount.String()
+	length := len(str)
+	buff := &bytes.Buffer{}
+	if ca.Prec >= length {
+		buff.WriteString("0.")
+		for i := 0; i < ca.Prec-length+1; i++ {
+			buff.WriteString("0")
+		}
+		buff.WriteString(str)
 
-	buf.WriteString(ca.IntPart.String())
-	fstr := strconv.FormatFloat(ca.DecPart, 'f', ca.Prec, 64)
-	l := len(fstr)
-	fstr = fstr[1:l]
-	buf.WriteString(fstr)
-	return buf.String()
+	} else {
+		buff.WriteString(str[:length-ca.Prec])
+		buff.WriteString(".")
+		buff.WriteString(str[length-ca.Prec:])
+	}
+	return buff.String()
 }
 
+func stringToAmount(str string, cb CoinUnit, gupfunc getUnitPrec, origin CoinUnit) (ca *CoinAmount, err error) {
+	l, r, err := strutil.SplitStrToNum(str, false)
+	if err != nil {
+		return
+	}
+	gap := int(cb - origin)
+	rlen := len(r)
+	if rlen > gap {
+		err = errors.ERR_PARAM_FAIL
+		return
+	}
+	buff := &bytes.Buffer{}
+	buff.WriteString(l)
+	buff.WriteString(r)
+	for i := 0; i < gap-rlen; i++ {
+		buff.WriteString("0")
+	}
+	amt := big.NewInt(0)
+	amt.SetString(buff.String(), 10)
+	ca = &CoinAmount{
+		Amount:       amt,
+		CoinUnitPrec: gupfunc(cb),
+	}
+	return
+}
+
+/*
 //转换string类型数字为整数部分和小数部分
 func splitStrToNum(str string, cb CoinUnit, gupfunc getUnitPrec, origin CoinUnit) (ca *CoinAmount, err error) {
 	l, r, err := strutil.SplitStrToNum(str, false)
@@ -106,9 +130,44 @@ func splitStrToNum(str string, cb CoinUnit, gupfunc getUnitPrec, origin CoinUnit
 	}
 	ca.Z.SetString(buff.String(), 10)
 	return
-}
+}*/
 
-//性能测试效率较低
+/*//转换string类型数字为整数部分和小数部分
+func splitStrToNum(str string, cb CoinUnit, gupfunc getUnitPrec, origin CoinUnit) (ca *CoinAmount, err error) {
+	l, r, err := strutil.SplitStrToNum(str, false)
+	if err != nil {
+		return
+	}
+	ca = &CoinAmount{
+		CoinUnit:     cb,
+		CoinUnitPrec: gupfunc(cb),
+	}
+	ltmp := big.NewInt(0)
+	bl := false
+	if ca.IntPart, bl = ltmp.SetString(l, 10); !bl {
+		err = errors.ERR_PARAM_FAIL
+		return
+	}
+	buff := &bytes.Buffer{}
+	buff.WriteString(l)
+	if r != "" {
+		r = "0." + r
+		buff.WriteString(r)
+		if ca.DecPart, err = strconv.ParseFloat(r, 64); err != nil {
+			return
+		}
+	}
+	gap := int(cb - origin)
+	if gap > 0 {
+		for i := 0; i < gap; i++ {
+			buff.WriteString("0")
+		}
+	}
+	ca.Z.SetString(buff.String(), 10)
+	return
+}*/
+
+/*//性能测试效率较低
 func convertCoinUnit1(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec, origin CoinUnit) (caout *CoinAmount, err error) {
 	if ca == nil {
 		err = errors.ERR_PARAM_FAIL
@@ -196,6 +255,6 @@ func convertCoinUnit(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *C
 	}
 	caout.CoinUnit = cb
 	return
-}
+}*/
 
 type getUnitPrec func(cu CoinUnit) (cup *CoinUnitPrec)

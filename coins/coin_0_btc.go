@@ -16,9 +16,6 @@ func (c *BtcCoin) StringToCoinAmout(num string) (ca *CoinAmount, err error) {
 	}
 	return c.praseCoinAmount(num)
 }
-func (c *BtcCoin) ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit) (caout *CoinAmount, err error) {
-	return convertCoinUnit(ca, trgt, c.GetUnitPrec)
-}
 
 func (*BtcCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
 	cup = &CoinUnitPrec{}
@@ -56,5 +53,8 @@ func (*BtcCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
 	}
 }
 func (c *BtcCoin) praseCoinAmount(num string) (ca *CoinAmount, err error) {
-	return splitStrToNum(num, CoinOrdinary, c.GetUnitPrec, CoinBox)
+	return stringToAmount(num, CoinOrdinary, c.GetUnitPrec, CoinBox)
+}
+func (c *BtcCoin) GetOrginCoinUnit() CoinUnit {
+	return CoinBox
 }
