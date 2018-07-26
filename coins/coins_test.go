@@ -42,15 +42,13 @@ var (
 	handler    CoinsHandler
 )
 
+//prec会约束DecPart的float精度
 func TestCoinAmount_String(t *testing.T) {
-	bg := big.NewInt(1000)
-	amount := &coins.CoinAmount{bg, 0.00000004, coins.CoinMicro, &coins.CoinUnitPrec{}}
-
-	t.Log(amount.String())
+	t.Log(simpleca.String())
 }
 
 //测试用例模板
-func TestBtcCoin_GetNewAmount(t *testing.T) {
+func Test_GetNewAmount(t *testing.T) {
 	handler.LoadService(btc)
 	switch handler.TypeName {
 	case btcSerName:
@@ -71,37 +69,22 @@ func TestBtcCoin_GetNewAmount(t *testing.T) {
 }
 
 //测试用例模板
-func TestBtcCoin_ConvertAmountPrec(t *testing.T) {
+func Test_ConvertAmountPrec(t *testing.T) {
 	handler.LoadService(btc)
 	switch handler.TypeName {
 	case btcSerName:
-		caout, err := handler.ConvertAmountPrec(simpleca, coins.CoinMega)
+		caout, err := handler.ConvertAmountPrec(simpleca, coins.CoinMicro)
 		if err != nil {
 			t.Error(err)
 			t.Fail()
 		} else {
-			t.Log(caout)
+			t.Log("\r\n原始:", simpleca.String(), "\r\n小数点精度prec:", simpleca.Prec, "\r\n单位:", simpleca.UnitName)
+			t.Log("\r\n转变:", caout.String(), "\r\n小数点精度prec:", caout.Prec, "\r\n单位:", caout.UnitName)
 		}
 
 		break
 	case "*coins.XlmCoin":
 		break
-	}
-}
-func BenchmarkBtcCoin_ConvertAmountPrec(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ { //use b.N for looping
-		coins.ConvertcoinUnit1(simpleca, coins.CoinBox, btc.GetUnitPrec)
-	}
-}
-
-func TestBtcCoin_GetNewOrdinaryAmount(t *testing.T) {
-	caout, err := coins.ConvertcoinUnit1(simpleca, coins.CoinBox, btc.GetUnitPrec)
-	if err != nil {
-		t.Error(err)
-		t.Fail()
-	} else {
-		t.Log(caout)
 	}
 }
 

@@ -42,7 +42,6 @@ func (ca *CoinAmount) String() string {
 	var buf bytes.Buffer
 
 	buf.WriteString(ca.IntPart.String())
-	//todo 精度问题，按不同币种来，这里实现有误
 	fstr := strconv.FormatFloat(ca.DecPart, 'f', ca.Prec, 64)
 	l := len(fstr)
 	fstr = fstr[1:l]
@@ -59,9 +58,9 @@ func splitStrToNum(str string, cb CoinUnit, gupfunc getUnitPrec) (ca *CoinAmount
 		return
 	}
 	ca = &CoinAmount{
-		CoinUnit: cb,
+		CoinUnit:     cb,
+		CoinUnitPrec: gupfunc(cb),
 	}
-	ca.UnitName = gupfunc(cb).UnitName
 	ltmp := big.NewInt(0)
 	bl := false
 	if ca.IntPart, bl = ltmp.SetString(l, 10); !bl {
@@ -76,7 +75,7 @@ func splitStrToNum(str string, cb CoinUnit, gupfunc getUnitPrec) (ca *CoinAmount
 	}
 	return
 }
-func ConvertcoinUnit(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *CoinAmount, err error) {
+func convertCoinUnit(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *CoinAmount, err error) {
 	if ca == nil {
 		err = errors.ERR_PARAM_FAIL
 		return
@@ -95,7 +94,7 @@ func ConvertcoinUnit(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *C
 }
 
 //转换精度
-func ConvertcoinUnit1(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *CoinAmount, err error) {
+func convertCoinUnit1(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *CoinAmount, err error) {
 	if ca == nil {
 		err = errors.ERR_PARAM_FAIL
 		return
@@ -104,27 +103,39 @@ func ConvertcoinUnit1(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *
 		caout = ca
 		return
 	}
-	gap := int(ca.CoinUnit) - int(cb)
+	caout = &CoinAmount{}
+	gap := int(cb - ca.CoinUnit)
 	ln := big.NewInt(0)
-	pow := math.Pow10(int(gap))
 	if gap > 0 {
 		//往左边移动
-		lstr := ca.IntPart.String()
+		lstr := ca.IntPart.String() //int部分全部字符串
 		llen := len(lstr)
+		int2dec := "" //int部分同步到dec部分的字符串
 		if gap > llen {
+			//整数部分变0，全变小数
 			caout.IntPart = big.NewInt(0)
+			int2dec = lstr //同步全部
 		} else {
 			llstr := lstr[:llen-gap]
-			lrstr := lstr[llen-gap:]
+			int2dec = lstr[llen-gap:] //同步末尾部分
 			ip := big.NewInt(0)
-			ca.IntPart, _ = ip.SetString(llstr, 10)
-			lrstr = "0." + lrstr
-			lrf, _ := strconv.ParseFloat(lrstr, 64)
-			pow := math.Pow10(int(-gap))
-			caout.DecPart = ca.DecPart*pow + lrf
+			caout.IntPart, _ = ip.SetString(llstr, 10)
 		}
+		//decPart开始转换,补位gap数量的长度
+		buff := &bytes.Buffer{}
+		buff.WriteString("0.")
+		for i := 0; i < gap-len(int2dec); i++ {
+			buff.WriteString("0")
+		}
+		buff.WriteString(int2dec)
+		decLeft, _ := strconv.ParseFloat(buff.String(), 64)
+		pow := math.Pow10(int(-gap))
+		//原小数移位+int部分的移位部分
+		caout.DecPart = ca.DecPart*pow + decLeft
+
 	} else {
 		gap = -gap
+		pow := math.Pow10(int(gap))
 		//补位
 		l := ln.Mul(ca.IntPart, big.NewInt(int64(pow)))
 		r := ca.DecPart * pow
@@ -146,8 +157,7 @@ func ConvertcoinUnit1(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *
 		caout.IntPart = l
 	}
 	caout.CoinUnit = cb
-
-	caout.UnitName = gupfunc(cb).UnitName
+	caout.CoinUnitPrec = gupfunc(cb)
 	return
 }
 

@@ -5,13 +5,11 @@ import (
 )
 
 type BtcCoin struct {
-
 }
 
 var regSer utils.RegUtil
 
 const btcPrec int64 = 1e8
-
 
 func (b *BtcCoin) NewCoinAmout(num string) (ca *CoinAmount, err error) {
 	err = regSer.CanPraseBigFloat(num)
@@ -21,11 +19,11 @@ func (b *BtcCoin) NewCoinAmout(num string) (ca *CoinAmount, err error) {
 	return splitStrToNum(num, CoinOrdinary, b.GetUnitPrec)
 }
 func (b *BtcCoin) ConvertAmountPrec(ca *CoinAmount, trgt CoinUnit) (caout *CoinAmount, err error) {
-	return ConvertcoinUnit(ca, trgt, b.GetUnitPrec)
+	return convertCoinUnit(ca, trgt, b.GetUnitPrec)
 }
 
-
-func (*BtcCoin)GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
+func (*BtcCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
+	cup = &CoinUnitPrec{}
 	switch cu {
 	case CoinBilli:
 		cup.UnitName = "BBTC"
