@@ -1,15 +1,17 @@
 package coins
 
-import "strconv"
+import (
+	"strconv"
+)
 
 type BtcCoin struct {
-	Orgin CoinUnit
+	*coinAmount
 }
 
-func (c *BtcCoin) FloatToCoinAmout(f float64) (*CoinAmount, error) {
+func (c *BtcCoin) FloatToCoinAmout(f float64) (CoinAmounter, error) {
 	return c.praseCoinAmount(strconv.FormatFloat(f, 'f', 8, 64))
 }
-func (c *BtcCoin) StringToCoinAmout(num string) (ca *CoinAmount, err error) {
+func (c *BtcCoin) StringToCoinAmout(num string) (ca CoinAmounter, err error) {
 	err = regutil.CanPraseBigFloat(num)
 	if err != nil {
 		return
@@ -22,42 +24,42 @@ func (c *BtcCoin) GetOrginCoinUnit() CoinUnit {
 
 func (*BtcCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
 	cup = &CoinUnitPrec{
-		CoinUnit: cu,
+		coinUnit: cu,
 	}
 	switch cu {
 	case CoinBilli:
-		cup.UnitName = "BBTC"
-		cup.Prec = 17
+		cup.unitName = "BBTC"
+		cup.prec = 17
 
 		return
 	case CoinMega:
-		cup.UnitName = "MBTC"
-		cup.Prec = 14
+		cup.unitName = "MBTC"
+		cup.prec = 14
 		return
 	case CoinKilo:
-		cup.UnitName = "KBTC"
-		cup.Prec = 11
+		cup.unitName = "KBTC"
+		cup.prec = 11
 		return
 	case CoinOrdinary:
-		cup.UnitName = "BTC"
-		cup.Prec = 8
+		cup.unitName = "BTC"
+		cup.prec = 8
 		return
 	case CoinMilli:
-		cup.UnitName = "mBTC"
-		cup.Prec = 5
+		cup.unitName = "mBTC"
+		cup.prec = 5
 		return
 	case CoinMicro:
-		cup.UnitName = "μBTC"
-		cup.Prec = 2
+		cup.unitName = "μBTC"
+		cup.prec = 2
 		return
 	case CoinBox:
-		cup.UnitName = "Satoshi"
-		cup.Prec = 0
+		cup.unitName = "Satoshi"
+		cup.prec = 0
 		return
 	default:
 		return
 	}
 }
-func (c *BtcCoin) praseCoinAmount(num string) (ca *CoinAmount, err error) {
+func (c *BtcCoin) praseCoinAmount(num string) (ca CoinAmounter, err error) {
 	return stringToAmount(num, CoinOrdinary, c.GetUnitPrec, c.GetOrginCoinUnit())
 }

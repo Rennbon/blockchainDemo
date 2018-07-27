@@ -1,8 +1,6 @@
 package coins
 
-import "strconv"
-
-type XmlCoin struct {
+/*type XmlCoin struct {
 }
 
 func (c *XmlCoin) FloatToCoinAmout(f float64) (*CoinAmount, error) {
@@ -20,14 +18,14 @@ func (c *XmlCoin) GetOrginCoinUnit() CoinUnit {
 }
 func (c *XmlCoin) praseCoinAmount(num string) (ca *CoinAmount, err error) {
 	return stringToAmount(num, CoinOrdinary, c.GetUnitPrec, c.GetOrginCoinUnit())
-}
+}*/
 
 /*
 	0.000001
 	baseFee       float64 = 0.0001 //小费基数（单位:xlm）
 	baseFeeLemuns uint64  = 100    //小费 (单位：lumens)
 */
-func (*XmlCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
+/*func (*XmlCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
 	cup = &CoinUnitPrec{}
 	switch cu {
 	case CoinBilli:
@@ -57,4 +55,4 @@ func (*XmlCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
 	default:
 		return
 	}
-}
+}*/

@@ -11,32 +11,39 @@ var regutil utils.RegUtil
 var strutil utils.StrUtil
 
 //接入币种实现接口
-type CoinAmounter interface {
-	FloatToCoinAmout(f float64) (*CoinAmount, error)
+type DistributionCoiner interface {
+	FloatToCoinAmout(f float64) (CoinAmounter, error)
 	//获取新amount
 	//num:数值
 	//trgt：目标精度
-	StringToCoinAmout(num string) (*CoinAmount, error)
+	StringToCoinAmout(num string) (CoinAmounter, error)
 	//获取指定单位对应的精度及单位名称
 	GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec)
 	//获取元精度，就是币种最小单位，比如比特币的聪对应的单位
 	GetOrginCoinUnit() CoinUnit
 }
 
+type CoinAmounter interface {
+	val() *big.Int
+	String(coinUnit orginCoinUnit) string
+	Add(amount CoinAmounter) error
+	Sub(amount CoinAmounter) error
+	Mul(amount CoinAmounter) error
+}
+
 //代币单位
-type CoinUnitName string
+type coinUnitName string
 type CoinUnit int8
 
 //金额
-type CoinAmount struct {
-	Amount        *big.Int //基本代币开始计算，为正整数，如比特币的聪，最基本单位
+type coinAmount struct {
+	amount        *big.Int //基本代币开始计算，为正整数，如比特币的聪，最基本单位
 	*CoinUnitPrec          //当前显示需要换算的单位，用作处理amount to string时需要加的小数点位置
-
 }
 type CoinUnitPrec struct {
-	CoinUnit CoinUnit     //精度标准位
-	Prec     int          //小数精度
-	UnitName CoinUnitName //单位字符串
+	coinUnit CoinUnit     //精度标准位
+	prec     int          //小数精度
+	unitName coinUnitName //单位字符串
 }
 
 //单位层次，普通单位上下各三层，一共七层
@@ -55,15 +62,15 @@ const (
 type getUnitPrec func(cu CoinUnit) (cup *CoinUnitPrec)
 type orginCoinUnit func() CoinUnit
 
-func (ca *CoinAmount) String(coinUnit orginCoinUnit) string {
-	if &ca == nil {
-		return ""
-	}
-	str := ca.Amount.String()
+func (c *coinAmount) val() *big.Int {
+	return c.amount
+}
+func (c *coinAmount) String(coinUnit orginCoinUnit) string {
+	str := c.amount.String()
 	length := len(str)
 	buff := &bytes.Buffer{}
 	//将要左移多少位
-	gap := int(ca.CoinUnit - coinUnit())
+	gap := int(c.coinUnit - coinUnit())
 	if gap >= length {
 		buff.WriteString("0.")
 		for i := 0; i < gap-length+1; i++ {
@@ -79,16 +86,31 @@ func (ca *CoinAmount) String(coinUnit orginCoinUnit) string {
 	return buff.String()
 }
 
-//todo 需要隔离不同币种的，如btc,eth的相加
-func (ca *CoinAmount) Add(amount *CoinAmount) error {
+func (c *coinAmount) Add(amount CoinAmounter) error {
 	if amount == nil {
 		return errors.ERR_PARAM_CANNOT_NIL
 	}
-	ca.Amount.Add(ca.Amount, amount.Amount)
+	c.amount.Add(c.amount, amount.val())
 	return nil
 }
 
-func stringToAmount(str string, cb CoinUnit, gupfunc getUnitPrec, origin CoinUnit) (ca *CoinAmount, err error) {
+func (c *coinAmount) Sub(amount CoinAmounter) error {
+	if amount == nil {
+		return errors.ERR_PARAM_CANNOT_NIL
+	}
+	c.amount.Sub(c.amount, amount.val())
+	return nil
+}
+
+func (c *coinAmount) Mul(amount CoinAmounter) error {
+	if amount == nil {
+		return errors.ERR_PARAM_CANNOT_NIL
+	}
+	c.amount.Mul(c.amount, amount.val())
+	return nil
+}
+
+func stringToAmount(str string, cb CoinUnit, gupfunc getUnitPrec, origin CoinUnit) (ca CoinAmounter, err error) {
 	l, r, err := strutil.SplitStrToNum(str, false)
 	if err != nil {
 		return
@@ -107,11 +129,11 @@ func stringToAmount(str string, cb CoinUnit, gupfunc getUnitPrec, origin CoinUni
 	}
 	amt := big.NewInt(0)
 	amt.SetString(buff.String(), 10)
-	ca = &CoinAmount{
-		Amount:       amt,
+	cc := &coinAmount{
+		amount:       amt,
 		CoinUnitPrec: gupfunc(cb),
 	}
-	return
+	return cc, nil
 }
 
 /*
