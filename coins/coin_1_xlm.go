@@ -32,11 +32,11 @@ func (*XmlCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
 	switch cu {
 	case CoinBilli:
 		cup.unitName = "BXLM"
-		cup.prec = 14
+		cup.prec = 15
 		return
 	case CoinMega:
 		cup.unitName = "MXLM"
-		cup.prec = 11
+		cup.prec = 12
 		return
 	case CoinKilo:
 		cup.unitName = "KXLM"
@@ -44,7 +44,7 @@ func (*XmlCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
 		return
 	case CoinOrdinary:
 		cup.unitName = "XLM"
-		cup.prec = 6
+		cup.prec = 7
 		return
 	case CoinMilli:
 		cup.unitName = "KLumens"

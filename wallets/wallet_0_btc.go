@@ -128,22 +128,24 @@ func (*BtcService) GetBalanceInAddress(address string) (balance coins.CoinAmount
 //addrForm来源地址，addrTo去向地址
 //transfer 转账金额
 //fee 小费
-func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee float64) (txId string, err error) {
+func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter) (txId string, err error) {
 	//数据库获取prv pub key等信息，便于调试--------START------
 	actf, err := dhSrv.GetAccountByAddress(addrFrom)
 	if err != nil {
 		return
 	}
 	//----------------------------------------END-----------
-
 	unspents, err := getUnspentByAddress(addrFrom)
 	if err != nil {
 		return
 	}
 	//各种参数声明 可以构建为内部小对象
-	outsu := float64(0)                 //unspent单子相加
-	feesum := fee                       //交易费总和
-	totalTran := transfer + feesum      //总共花费
+	//outsu := float64(0)                     //unspent单子相加
+	outsu, _ := btcCoin.StringToCoinAmout("0") //unspent单子相加
+	feesum := fee                              //交易费总和
+	totalTran, _ := btcCoin.StringToCoinAmout("0")
+	totalTran.Add(transfer, feesum) //总共花费
+	//totalTran := transfer + feesum      //总共花费
 	var pkscripts [][]byte              //txin签名用script
 	tx := wire.NewMsgTx(wire.TxVersion) //构造tx
 
@@ -151,8 +153,12 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 		if v.Amount == 0 {
 			continue
 		}
-		if outsu < totalTran {
-			outsu += v.Amount
+		if outsu.Cmp(totalTran) == -1 {
+			am, _ := btcCoin.FloatToCoinAmout(v.Amount)
+			/*if err != nil {
+				return
+			}*/
+			outsu.Add(am)
 			{
 				//txin输入-------start-----------------
 				hash, _ := chainhash.NewHashFromStr(v.TxID)
@@ -172,9 +178,34 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 		} else {
 			break
 		}
+		/*if outsu < totalTran {
+			outsu += v.Amount
+			{
+				//txin输入-------start-----------------
+				hash, _ := chainhash.NewHashFromStr(v.TxID)
+				outPoint := wire.NewOutPoint(hash, v.Vout)
+				txIn := wire.NewTxIn(outPoint, nil, nil)
+
+				tx.AddTxIn(txIn)
+
+				//设置签名用script
+				txinPkScript, errInner := hex.DecodeString(v.ScriptPubKey)
+				if errInner != nil {
+					err = errInner
+					return
+				}
+				pkscripts = append(pkscripts, txinPkScript)
+			}
+		} else {
+			break
+		}*/
 	}
 	//家里穷钱不够
-	if outsu < totalTran {
+	/*if outsu < totalTran {
+		err = errors.ERR_NOT_ENOUGH_COIN
+		return
+	}*/
+	if outsu.Cmp(totalTran) == -1 {
 		err = errors.ERR_NOT_ENOUGH_COIN
 		return
 	}
@@ -187,8 +218,10 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 	if err != nil {
 		return
 	}
-	baf := int64((outsu - totalTran) * 1e8)
-	tx.AddTxOut(wire.NewTxOut(baf, pkScriptf))
+	//baf := int64((outsu - totalTran) * 1e8)
+	//tx.AddTxOut(wire.NewTxOut(baf, pkScriptf))
+	outsu.Sub(totalTran)
+	tx.AddTxOut(wire.NewTxOut(outsu.Val().Int64(), pkScriptf))
 	//输出2，给to------------------付钱-----------------
 	addrt, err := btcutil.DecodeAddress(addrTo, btcEnv)
 
@@ -199,8 +232,9 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 	if err != nil {
 		return
 	}
-	bat := int64(transfer * 1e8)
-	tx.AddTxOut(wire.NewTxOut(bat, pkScriptt))
+	/*bat := int64(transfer * 1e8)
+	tx.AddTxOut(wire.NewTxOut(bat, pkScriptt))*/
+	tx.AddTxOut(wire.NewTxOut(transfer.Val().Int64(), pkScriptt))
 	//-------------------输出填充end------------------------------
 	err = sign(tx, actf.PrvKey, pkscripts) //签名
 	if err != nil {

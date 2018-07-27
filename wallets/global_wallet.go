@@ -24,8 +24,7 @@ type Walleter interface {
 	//获取指定地址的余额
 	GetBalanceInAddress(string) (balance coins.CoinAmounter, err error)
 	//账户转钱到账户
-	//
-	SendAddressToAddress(addrFrom, addrTo string, transfer, fee float64) (txId string, err error)
+	SendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter) (txId string, err error)
 	//检测交易状态（交易是否被确认）
 	//txId:交易id
 	CheckTxMergerStatus(txId string) error

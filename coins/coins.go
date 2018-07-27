@@ -38,9 +38,12 @@ type CoinAmounter interface {
 	String() string
 	ToString(target CoinUnit, unitPrec getUnitPrec, withUnit bool) string
 	Float64() (float64, error)
-	Add(amount CoinAmounter) error
-	Sub(amount CoinAmounter) error
-	Mul(amount CoinAmounter) error
+	Add(amounts ...CoinAmounter) error
+	Sub(amounts ...CoinAmounter) error
+	Mul(amounts ...CoinAmounter) error
+	//对比大小
+	//比较c和amount的大小。c<amount时返回-1；c>amount时返回+1；否则返回0。
+	Cmp(amount CoinAmounter) int
 }
 
 //币种单位进度
@@ -127,33 +130,45 @@ func (c *coinAmount) String() string {
 	return toString(c, c.prec)
 }
 
+//对比大小
+//比较c和amount的大小。c<amount时返回-1；c>amount时返回+1；否则返回0。
+func (c *coinAmount) Cmp(amount CoinAmounter) int {
+	return c.amount.Cmp(amount.Val())
+}
+
 //金额相加
 //amount:需要相加的对象
-func (c *coinAmount) Add(amount CoinAmounter) error {
-	if amount == nil {
+func (c *coinAmount) Add(amounts ...CoinAmounter) error {
+	if amounts == nil {
 		return errors.ERR_PARAM_CANNOT_NIL
 	}
-	c.amount.Add(c.amount, amount.Val())
+	for _, v := range amounts {
+		c.amount.Add(c.amount, v.Val())
+	}
 	return nil
 }
 
 //金额相减
 //amount:需要相减的对象
-func (c *coinAmount) Sub(amount CoinAmounter) error {
-	if amount == nil {
+func (c *coinAmount) Sub(amounts ...CoinAmounter) error {
+	if amounts == nil {
 		return errors.ERR_PARAM_CANNOT_NIL
 	}
-	c.amount.Sub(c.amount, amount.Val())
+	for _, v := range amounts {
+		c.amount.Sub(c.amount, v.Val())
+	}
 	return nil
 }
 
 //金额相乘
 //amount:需要相乘的对象
-func (c *coinAmount) Mul(amount CoinAmounter) error {
-	if amount == nil {
+func (c *coinAmount) Mul(amounts ...CoinAmounter) error {
+	if amounts == nil {
 		return errors.ERR_PARAM_CANNOT_NIL
 	}
-	c.amount.Mul(c.amount, amount.Val())
+	for _, v := range amounts {
+		c.amount.Mul(c.amount, v.Val())
+	}
 	return nil
 }
 

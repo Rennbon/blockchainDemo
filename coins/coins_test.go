@@ -40,6 +40,15 @@ var (
 	handler    CoinsHandler
 )
 
+func TestCoinAmount_Add(t *testing.T) {
+	handler.LoadService(xlm)
+	am1, _ := handler.StringToCoinAmout("100")
+	am2, _ := handler.StringToCoinAmout("200")
+	am3 := am1
+	am1.Add(am2, am2)
+	t.Log(am1.String(), am2.String(), am3.String())
+}
+
 //测试用例模板
 func Test_StringToCoinAmout(t *testing.T) {
 	handler.LoadService(xlm)

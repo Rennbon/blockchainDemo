@@ -11,12 +11,14 @@ import (
 
 type CoinHandler struct {
 	wallets.Walleter
+	coins.BtcCoin
 	TypeName string
 }
 
 func (ch *CoinHandler) LoadService(g wallets.Walleter) error {
 	if g != nil {
 		ch.Walleter = g
+
 	}
 	typ := reflect.TypeOf(g)
 	ch.TypeName = typ.String()
@@ -25,8 +27,10 @@ func (ch *CoinHandler) LoadService(g wallets.Walleter) error {
 
 var (
 	btc        *wallets.BtcService
+	btcCoin    coins.BtcCoin
 	btcStrName = "*wallets.BtcService"
 	xlm        *wallets.XlmService
+	xlmCoin    coins.XmlCoin
 	xlmStrName = "*wallets.XlmService"
 	handler    CoinHandler
 )
@@ -63,14 +67,14 @@ func TestGetNewAddress(t *testing.T) {
 
 //测试获取账户余额
 func TestGetBalanceInAddress(t *testing.T) {
-	handler.LoadService(btc)
+	handler.LoadService(xlm)
 	var (
 		balance coins.CoinAmounter
 		err     error
 	)
 	switch handler.TypeName {
 	case btcStrName:
-		balance, err = handler.GetBalanceInAddress("mhAfGecTPa9eZaaNkGJcV7fmUPFi3T2Ki8")
+		balance, err = handler.GetBalanceInAddress("n3ZT36odeAbur87bTdR6JGCtnWaquGgFZ2")
 		break
 	case xlmStrName:
 		balance, err = handler.GetBalanceInAddress("GD43TZONCLLNDHA5ALVRWZKMATTOKNLLTH3XTAJN6SQK77Q3ZT44QJJV")
@@ -79,23 +83,28 @@ func TestGetBalanceInAddress(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-
 	t.Log(balance.String())
 }
 
 //测试账号到账号
 func TestSendAddressToAddress(t *testing.T) {
-	handler.LoadService(btc)
+	handler.LoadService(xlm)
 	var (
-		txId string
-		err  error
+		txId          string
+		err           error
+		transfer, fee coins.CoinAmounter
 	)
+
 	switch handler.TypeName {
 	case btcStrName:
-		txId, err = handler.SendAddressToAddress("n4UYCTwXvJ7ijCC9ERGr7qYAuJbiLjUcwT", "mvY3JLZNZrvRewbgMZwvj9CHUJWtQeZjff", 10, 0.0001)
+		transfer, _ = btcCoin.StringToCoinAmout("10")
+		fee, _ = btcCoin.StringToCoinAmout("0.0001")
+		txId, err = handler.SendAddressToAddress("mhAfGecTPa9eZaaNkGJcV7fmUPFi3T2Ki8", "n3ZT36odeAbur87bTdR6JGCtnWaquGgFZ2", transfer, fee)
 		break
 	case xlmStrName:
-		txId, err = handler.SendAddressToAddress("n4UYCTwXvJ7ijCC9ERGr7qYAuJbiLjUcwT", "mvY3JLZNZrvRewbgMZwvj9CHUJWtQeZjff", 10, 0.0001)
+		transfer, _ = xlmCoin.StringToCoinAmout("10")
+		fee, _ = xlmCoin.StringToCoinAmout("0.0001")
+		txId, err = handler.SendAddressToAddress("n4UYCTwXvJ7ijCC9ERGr7qYAuJbiLjUcwT", "mvY3JLZNZrvRewbgMZwvj9CHUJWtQeZjff", transfer, transfer)
 		break
 	}
 
@@ -107,13 +116,13 @@ func TestSendAddressToAddress(t *testing.T) {
 
 //测试交易状态
 func TestCheckTxMergerStatus(t *testing.T) {
-	handler.LoadService(xlm)
+	handler.LoadService(btc)
 	var (
 		err error
 	)
 	switch handler.TypeName {
 	case btcStrName:
-		err = handler.CheckTxMergerStatus("7f11a56ce356281ff5244ae57804da370c3cb0b685367088d10bf67be0a93f59")
+		err = handler.CheckTxMergerStatus("88af33f7e455751ae130746f7a7bd6538fc8b791aa67692dba33ab450ada9c92")
 		break
 	case xlmStrName:
 		err = handler.CheckTxMergerStatus("5b410a62000da9d16fbffdc0b799b219599d6a303cadc6a00db821788f44c53e")
@@ -126,7 +135,7 @@ func TestCheckTxMergerStatus(t *testing.T) {
 
 //测试账号是否存在
 func TestCheckAddressExists(t *testing.T) {
-	handler.LoadService(xlm)
+	handler.LoadService(btc)
 	var (
 		err error
 	)

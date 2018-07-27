@@ -7,7 +7,6 @@ import (
 	"github.com/Rennbon/blockchainDemo/certs"
 	"github.com/Rennbon/blockchainDemo/database"
 	"github.com/Rennbon/blockchainDemo/errors"
-	"strconv"
 	"time"
 
 	"github.com/Rennbon/blockchainDemo/coins"
@@ -42,6 +41,16 @@ func initXlmClinet(conf *config.XlmConf) {
 		break
 	}
 	log.Println("coins=>xlm_wallet=>initClinet sccuess.")
+
+	var err error
+	baseReserve, err = xlmcoin.StringToCoinAmout("0.5")
+	if err != nil {
+		panic(err)
+	}
+	baseFee, err = xlmcoin.StringToCoinAmout("0.0001")
+	if err != nil {
+		panic(err)
+	}
 }
 
 var (
@@ -51,15 +60,18 @@ var (
 	client  *horizon.Client
 	netWork build.Network
 	//xlm固定值
-	baseReserve   float64 = 0.5    //账户保证金基数
+	/*baseReserve   float64 = 0.5    //账户保证金基数
 	baseFee       float64 = 0.0001 //小费基数（单位:xlm）
-	baseFeeLemuns uint64  = 100    //小费 (单位：lumens)
+	baseFeeLemuns uint64  = 100    //小费 (单位：lumens)*/
+	baseReserve   coins.CoinAmounter
+	baseFee       coins.CoinAmounter
+	baseFeeLemuns coins.CoinAmounter
 )
 
 //////////////////////////////////////////////////////
 //生成新账号
 //
-func (*XlmService) GetNewAddress(account string, mode AcountRunMode) (address, accountOut string, err error) {
+func (c *XlmService) GetNewAddress(account string, mode AcountRunMode) (address, accountOut string, err error) {
 	key, err := certXlmSrv.GenerateSimpleKey()
 	if err != nil {
 		return
@@ -84,8 +96,11 @@ func (*XlmService) GetNewAddress(account string, mode AcountRunMode) (address, a
 	//源账号不要开通其他付费条目
 	//源账户保底剩余 基础保证金*2
 	//新账户保底创建 基础保证金*2
-	comparedAmount := baseReserve*2 + baseFee + baseReserve*2
-	if err = checkBalanceEnough(godAddress, comparedAmount); err != nil {
+	//comparedAmount := baseReserve*2 + baseFee + baseReserve*2
+	comparedAmount, err := xlmcoin.StringToCoinAmout("0")
+	comparedAmount.Add(baseFee, baseReserve, baseReserve, baseReserve, baseReserve)
+
+	if err = c.checkBalanceEnough(godAddress, comparedAmount); err != nil {
 		return
 	}
 	//获取序列数
@@ -99,8 +114,11 @@ func (*XlmService) GetNewAddress(account string, mode AcountRunMode) (address, a
 		Signers    新用户初始化会有一条singer
 		Data entries
 	*/
-	amount := baseReserve * 2 //基础+Singer=2条
-	amountStr := strconv.FormatFloat(amount, 'f', 8, 64)
+	//amount := baseReserve * 2 //基础+Singer=2条
+	//amountStr := strconv.FormatFloat(amount, 'f', 8, 64)
+	amount, _ := xlmcoin.StringToCoinAmout("0")
+	amount.Add(baseReserve, baseReserve)
+
 	tx, err := build.Transaction(
 		build.TestNetwork,
 		build.Sequence{uint64(num) + 1}, //这里用autoSequence 失败了，公链可以在尝试下
@@ -108,9 +126,9 @@ func (*XlmService) GetNewAddress(account string, mode AcountRunMode) (address, a
 		build.MemoText{"Create Account"}, //元数据，就是便签
 		build.CreateAccount(
 			build.Destination{key.Address},
-			build.NativeAmount{amountStr}, //初始账号最小为0.5Lumens
+			build.NativeAmount{amount.String()}, //初始账号最小为0.5Lumens
 		),
-		build.BaseFee{baseFeeLemuns},
+		build.BaseFee{baseFee.Val().Uint64()},
 	)
 	if err != nil {
 		return
@@ -158,7 +176,7 @@ func (*XlmService) GetBalanceInAddress(address string) (balance coins.CoinAmount
 //addrForm来源地址，addrTo去向地址
 //transfer 转账金额
 //fee 小费
-func (*XlmService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee float64) (txId string, err error) {
+func (c *XlmService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter) (txId string, err error) {
 	//数据库获取prv pub key等信息，便于调试--------START------
 	actf, err := dhSrv.GetAccountByAddress(addrFrom)
 	if err != nil {
@@ -174,10 +192,14 @@ func (*XlmService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee f
 	//sumfee = num of operations × base fee
 	//The base reserve (currently 0.5 XLM) is used in minimum account balances.
 	//(2 + n) × base reserve = 2.5 XLM.
-	amount := strconv.FormatFloat(transfer, 'f', 8, 64)
+
+	//amount := strconv.FormatFloat(transfer, 'f', 7, 64)
 	//验证金额总数
-	comparedAmount := transfer + baseFee + baseReserve*2*2
-	if err = checkBalanceEnough(addrFrom, comparedAmount); err != nil {
+	//comparedAmount := transfer + baseFee + baseReserve*2*2
+	amount := transfer.ToString(coins.CoinOrdinary, btcCoin.GetUnitPrec, false)
+	comparedAmount, err := xlmcoin.StringToCoinAmout("0")
+	comparedAmount.Add(transfer, baseFee, baseReserve, baseReserve, baseReserve, baseReserve)
+	if err = c.checkBalanceEnough(addrFrom, comparedAmount); err != nil {
 		return
 	}
 	//小费是自己扣的，不需要这边实现，金额总数也不需要验证，当然可以验证
@@ -321,12 +343,26 @@ func (*XlmService) ClearAccount(from, to string) (err error) {
 //验证balance是否足够创建tx并成功
 //sourceAddress 付款地址
 //comparedAmount 目标金额
-func checkBalanceEnough(sourceAddress string, comparedAmount float64) error {
+/*func checkBalanceEnough(sourceAddress string, comparedAmount float64) error {
 	balance, err := getBalanceInAddress(sourceAddress)
 	if err != nil {
 		return err
 	}
 	if balance < comparedAmount {
+		return errors.ERR_NOT_ENOUGH_COIN
+	}
+	return nil
+}*/
+
+//验证balance是否足够创建tx并成功
+//sourceAddress 付款地址
+//comparedAmount 目标金额
+func (c *XlmService) checkBalanceEnough(sourceAddress string, comparedAmount coins.CoinAmounter) error {
+	balance, err := c.GetBalanceInAddress(sourceAddress)
+	if err != nil {
+		return err
+	}
+	if balance.Cmp(comparedAmount) == -1 {
 		return errors.ERR_NOT_ENOUGH_COIN
 	}
 	return nil
@@ -341,22 +377,26 @@ func sequenceForAccount(account string) error {
 	fmt.Println(num)
 	return nil
 }
-func getBalanceInAddress(address string) (balance float64, err error) {
+
+/*func getBalanceInAddress(address string) (balance coins.CoinAmounter, err error) {
 	account, err := client.LoadAccount(address)
 	if err != nil {
-		return 0, err
+		return
 	}
-	bls := float64(0)
+	balance, err = xlmcoin.StringToCoinAmout("0")
+	if err != nil {
+		return
+	}
 	for _, v := range account.Balances {
 		fmt.Println(v.Balance)
-		curBls, err := strconv.ParseFloat(v.Balance, 64)
-		if err != nil {
-			return 0, err
+		f, errinner := xlmcoin.StringToCoinAmout("0")
+		if errinner != nil {
+			err = errinner
 		}
-		bls += curBls
+		balance.Add(f)
 	}
-	return bls, nil
-}
+	return
+}*/
 
 /////////////////////////////////////////////////////just for test///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
