@@ -55,6 +55,9 @@ func (*BtcCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
 		cup.prec = 0
 		return
 	default:
+		cup.unitName = "Satoshi"
+		cup.prec = 0
+		cup.coinUnit = CoinBox
 		return
 	}
 }

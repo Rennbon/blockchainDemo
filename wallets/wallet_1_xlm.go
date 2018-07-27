@@ -63,9 +63,8 @@ var (
 	/*baseReserve   float64 = 0.5    //账户保证金基数
 	baseFee       float64 = 0.0001 //小费基数（单位:xlm）
 	baseFeeLemuns uint64  = 100    //小费 (单位：lumens)*/
-	baseReserve   coins.CoinAmounter
-	baseFee       coins.CoinAmounter
-	baseFeeLemuns coins.CoinAmounter
+	baseReserve coins.CoinAmounter
+	baseFee     coins.CoinAmounter
 )
 
 //////////////////////////////////////////////////////
@@ -343,20 +342,6 @@ func (*XlmService) ClearAccount(from, to string) (err error) {
 //验证balance是否足够创建tx并成功
 //sourceAddress 付款地址
 //comparedAmount 目标金额
-/*func checkBalanceEnough(sourceAddress string, comparedAmount float64) error {
-	balance, err := getBalanceInAddress(sourceAddress)
-	if err != nil {
-		return err
-	}
-	if balance < comparedAmount {
-		return errors.ERR_NOT_ENOUGH_COIN
-	}
-	return nil
-}*/
-
-//验证balance是否足够创建tx并成功
-//sourceAddress 付款地址
-//comparedAmount 目标金额
 func (c *XlmService) checkBalanceEnough(sourceAddress string, comparedAmount coins.CoinAmounter) error {
 	balance, err := c.GetBalanceInAddress(sourceAddress)
 	if err != nil {
@@ -369,7 +354,7 @@ func (c *XlmService) checkBalanceEnough(sourceAddress string, comparedAmount coi
 }
 
 //获取账户序列数
-func sequenceForAccount(account string) error {
+func (c *XlmService) sequenceForAccount(account string) error {
 	num, err := client.SequenceForAccount(account)
 	if err != nil {
 		return err
@@ -377,26 +362,6 @@ func sequenceForAccount(account string) error {
 	fmt.Println(num)
 	return nil
 }
-
-/*func getBalanceInAddress(address string) (balance coins.CoinAmounter, err error) {
-	account, err := client.LoadAccount(address)
-	if err != nil {
-		return
-	}
-	balance, err = xlmcoin.StringToCoinAmout("0")
-	if err != nil {
-		return
-	}
-	for _, v := range account.Balances {
-		fmt.Println(v.Balance)
-		f, errinner := xlmcoin.StringToCoinAmout("0")
-		if errinner != nil {
-			err = errinner
-		}
-		balance.Add(f)
-	}
-	return
-}*/
 
 /////////////////////////////////////////////////////just for test///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

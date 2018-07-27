@@ -23,12 +23,15 @@ func (c *XmlCoin) praseCoinAmount(num string) (ca CoinAmounter, err error) {
 }
 
 /*
-	0.000001
+	0.0001
+    0.000001
 	baseFee       float64 = 0.0001 //小费基数（单位:xlm）
 	baseFeeLemuns uint64  = 100    //小费 (单位：lumens)
 */
 func (*XmlCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
-	cup = &CoinUnitPrec{}
+	cup = &CoinUnitPrec{
+		coinUnit: cu,
+	}
 	switch cu {
 	case CoinBilli:
 		cup.unitName = "BXLM"
@@ -44,7 +47,7 @@ func (*XmlCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
 		return
 	case CoinOrdinary:
 		cup.unitName = "XLM"
-		cup.prec = 7
+		cup.prec = 6
 		return
 	case CoinMilli:
 		cup.unitName = "KLumens"
@@ -55,6 +58,9 @@ func (*XmlCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
 		cup.prec = 0
 		return
 	default:
+		cup.unitName = "Lumens"
+		cup.prec = 0
+		cup.coinUnit = CoinMicro
 		return
 	}
 }

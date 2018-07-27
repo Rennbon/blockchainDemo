@@ -21,7 +21,7 @@ func TestClearAccount(t *testing.T) {
 }
 
 func TestSequenceForAccount(t *testing.T) {
-	err := sequenceForAccount("GCXQIFHEJDDL7MT3DJVSGPTRSG5K4YPTF2VYFS47DSCDJBOOJSH4TNLL")
+	err := xlm.sequenceForAccount("GCXQIFHEJDDL7MT3DJVSGPTRSG5K4YPTF2VYFS47DSCDJBOOJSH4TNLL")
 	if err != nil {
 		t.Error(err)
 	}
