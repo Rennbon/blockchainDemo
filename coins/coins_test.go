@@ -17,6 +17,10 @@ type CoinsHandler struct {
 ////////////////////测试用实体/////////////////////////////
 
 //////////////////////////////////////////////////
+var (
+	amountInt    int64 = 111111111111
+	amountString       = "111111111111"
+)
 
 func (ch *CoinsHandler) LoadService(g coins.CoinAmounter) error {
 	if g != nil {
@@ -25,7 +29,7 @@ func (ch *CoinsHandler) LoadService(g coins.CoinAmounter) error {
 	typ := reflect.TypeOf(g)
 	ch.TypeName = typ.String()
 	ch.CoinAmount = &coins.CoinAmount{
-		Amount:       big.NewInt(1000123112312382290),
+		Amount:       big.NewInt(amountInt),
 		CoinUnitPrec: g.GetUnitPrec(coins.CoinOrdinary),
 	}
 	return nil
@@ -42,38 +46,36 @@ var (
 //prec会约束DecPart的float精度
 func TestCoinAmount_String(t *testing.T) {
 	handler.LoadService(xlm)
-	t.Log(handler.CoinAmount.String())
+	t.Log(handler.CoinAmount.String(handler.GetOrginCoinUnit))
+}
+
+func TestCoinAmount_Add(t *testing.T) {
+	handler.LoadService(xlm)
+	ca, err := handler.StringToCoinAmout(amountString)
+	if err != nil {
+		t.Error(err)
+		t.Log("请转到Test_StringToCoinAmout调试")
+		t.Fail()
+	}
+	t.Log(ca.Amount.String())
+	t.Log(handler.Amount.String())
+	ca.Add(handler.CoinAmount)
+	t.Log(ca.String(handler.GetOrginCoinUnit))
 }
 
 //测试用例模板
-/*func Test_GetNewAmount(t *testing.T) {
+func Test_StringToCoinAmout(t *testing.T) {
 	handler.LoadService(xlm)
-	ca, err := handler.StringToCoinAmout("996123812.123123123")
+	ca, err := handler.StringToCoinAmout(amountString)
 	if err != nil {
 		t.Error(err)
 		t.Fail()
 	}
-	if handler.CoinAmount.String() != ca.String() {
-		t.Error("生成值错误")
-		t.Fail()
-	}
-	t.Log(ca)
-}*/
+	str1 := ca.String(handler.GetOrginCoinUnit)
 
-/*//测试用例模板
-func Test_ConvertAmountPrec(t *testing.T) {
-	handler.LoadService(xlm)
-	caout, err := handler.ConvertAmountPrec(handler.CoinAmount, coins.CoinMicro)
-	if err != nil {
-		t.Error(err)
-		t.Fail()
-	} else {
-		t.Log("\r\n原始:", handler.CoinAmount.String(), "\r\n小数点精度prec:", handler.CoinAmount.Prec, "\r\n单位:", handler.CoinAmount.UnitName)
-		t.Log("\r\n转变:", caout.String(), "\r\n小数点精度prec:", caout.Prec, "\r\n单位:", caout.UnitName)
-	}
-
+	t.Log(str1)
 }
-*/
+
 //测试用例模板
 func Test(t *testing.T) {
 	handler.LoadService(btc)

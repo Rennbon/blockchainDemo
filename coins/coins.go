@@ -17,18 +17,24 @@ type CoinAmounter interface {
 	//num:数值
 	//trgt：目标精度
 	StringToCoinAmout(num string) (*CoinAmount, error)
-	//获取精度及单位
+	//获取指定单位对应的精度及单位名称
 	GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec)
+	//获取元精度，就是币种最小单位，比如比特币的聪对应的单位
+	GetOrginCoinUnit() CoinUnit
 }
 
 //代币单位
 type CoinUnitName string
 type CoinUnit int8
+
+//金额
 type CoinAmount struct {
 	Amount        *big.Int //基本代币开始计算，为正整数，如比特币的聪，最基本单位
-	*CoinUnitPrec          //默认tostring的单位
+	*CoinUnitPrec          //当前显示需要换算的单位，用作处理amount to string时需要加的小数点位置
+
 }
 type CoinUnitPrec struct {
+	CoinUnit CoinUnit     //精度标准位
 	Prec     int          //小数精度
 	UnitName CoinUnitName //单位字符串
 }
@@ -45,31 +51,41 @@ const (
 	CoinBox      CoinUnit = -8
 )
 
-func (ca *CoinAmount) Add(amount *CoinAmount) {
+//按照
+type getUnitPrec func(cu CoinUnit) (cup *CoinUnitPrec)
+type orginCoinUnit func() CoinUnit
 
-}
-
-//todo 最低精度传参需要加，哎，看到源码的先忽略这边
-func (ca *CoinAmount) String() string {
+func (ca *CoinAmount) String(coinUnit orginCoinUnit) string {
 	if &ca == nil {
 		return ""
 	}
 	str := ca.Amount.String()
 	length := len(str)
 	buff := &bytes.Buffer{}
-	if ca.Prec >= length {
+	//将要左移多少位
+	gap := int(ca.CoinUnit - coinUnit())
+	if gap >= length {
 		buff.WriteString("0.")
-		for i := 0; i < ca.Prec-length+1; i++ {
+		for i := 0; i < gap-length+1; i++ {
 			buff.WriteString("0")
 		}
 		buff.WriteString(str)
 
 	} else {
-		buff.WriteString(str[:length-ca.Prec])
+		buff.WriteString(str[:length-gap])
 		buff.WriteString(".")
-		buff.WriteString(str[length-ca.Prec:])
+		buff.WriteString(str[length-gap:])
 	}
 	return buff.String()
+}
+
+//todo 需要隔离不同币种的，如btc,eth的相加
+func (ca *CoinAmount) Add(amount *CoinAmount) error {
+	if amount == nil {
+		return errors.ERR_PARAM_CANNOT_NIL
+	}
+	ca.Amount.Add(ca.Amount, amount.Amount)
+	return nil
 }
 
 func stringToAmount(str string, cb CoinUnit, gupfunc getUnitPrec, origin CoinUnit) (ca *CoinAmount, err error) {
@@ -80,7 +96,7 @@ func stringToAmount(str string, cb CoinUnit, gupfunc getUnitPrec, origin CoinUni
 	gap := int(cb - origin)
 	rlen := len(r)
 	if rlen > gap {
-		err = errors.ERR_PARAM_FAIL
+		err = errors.ERR_STRNUM_PREC_OVERFLOW
 		return
 	}
 	buff := &bytes.Buffer{}
@@ -258,5 +274,3 @@ func convertCoinUnit(ca *CoinAmount, cb CoinUnit, gupfunc getUnitPrec) (caout *C
 	caout.CoinUnit = cb
 	return
 }*/
-
-type getUnitPrec func(cu CoinUnit) (cup *CoinUnitPrec)

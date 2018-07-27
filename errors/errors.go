@@ -10,4 +10,6 @@ var (
 	ERR_NOT_ENOUGH_COIN      = errors.New("Not enough coin.")
 	ERR_UNCONFIRMED          = errors.New("Tx unconfirmed.")
 	ERR_PARAM_FAIL           = errors.New("Parameter validation failed.")
+	ERR_STRNUM_PREC_OVERFLOW = errors.New("Decimal in the string is too long.")
+	ERR_PARAM_CANNOT_NIL     = errors.New("param can't nil")
 )

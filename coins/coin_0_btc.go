@@ -16,13 +16,19 @@ func (c *BtcCoin) StringToCoinAmout(num string) (ca *CoinAmount, err error) {
 	}
 	return c.praseCoinAmount(num)
 }
+func (c *BtcCoin) GetOrginCoinUnit() CoinUnit {
+	return CoinBox
+}
 
 func (*BtcCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
-	cup = &CoinUnitPrec{}
+	cup = &CoinUnitPrec{
+		CoinUnit: cu,
+	}
 	switch cu {
 	case CoinBilli:
 		cup.UnitName = "BBTC"
 		cup.Prec = 17
+
 		return
 	case CoinMega:
 		cup.UnitName = "MBTC"
@@ -53,8 +59,5 @@ func (*BtcCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
 	}
 }
 func (c *BtcCoin) praseCoinAmount(num string) (ca *CoinAmount, err error) {
-	return stringToAmount(num, CoinOrdinary, c.GetUnitPrec, CoinBox)
-}
-func (c *BtcCoin) GetOrginCoinUnit() CoinUnit {
-	return CoinBox
+	return stringToAmount(num, CoinOrdinary, c.GetUnitPrec, c.GetOrginCoinUnit())
 }
