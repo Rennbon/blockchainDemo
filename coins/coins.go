@@ -5,6 +5,7 @@ import (
 	"github.com/Rennbon/blockchainDemo/errors"
 	"github.com/Rennbon/blockchainDemo/utils"
 	"math/big"
+	"strconv"
 )
 
 var regutil utils.RegUtil
@@ -25,7 +26,8 @@ type DistributionCoiner interface {
 
 type CoinAmounter interface {
 	val() *big.Int
-	String(coinUnit orginCoinUnit) string
+	String() string
+	Float64() (float64, error)
 	Add(amount CoinAmounter) error
 	Sub(amount CoinAmounter) error
 	Mul(amount CoinAmounter) error
@@ -60,30 +62,17 @@ const (
 
 //按照
 type getUnitPrec func(cu CoinUnit) (cup *CoinUnitPrec)
-type orginCoinUnit func() CoinUnit
 
 func (c *coinAmount) val() *big.Int {
 	return c.amount
 }
-func (c *coinAmount) String(coinUnit orginCoinUnit) string {
-	str := c.amount.String()
-	length := len(str)
-	buff := &bytes.Buffer{}
-	//将要左移多少位
-	gap := int(c.coinUnit - coinUnit())
-	if gap >= length {
-		buff.WriteString("0.")
-		for i := 0; i < gap-length+1; i++ {
-			buff.WriteString("0")
-		}
-		buff.WriteString(str)
 
-	} else {
-		buff.WriteString(str[:length-gap])
-		buff.WriteString(".")
-		buff.WriteString(str[length-gap:])
-	}
-	return buff.String()
+func (c *coinAmount) Float64() (float64, error) {
+	f := c.String()
+	return strconv.ParseFloat(f, 64)
+}
+func (c *coinAmount) String() string {
+	return toString(c, c.prec)
 }
 
 func (c *coinAmount) Add(amount CoinAmounter) error {
@@ -134,6 +123,26 @@ func stringToAmount(str string, cb CoinUnit, gupfunc getUnitPrec, origin CoinUni
 		CoinUnitPrec: gupfunc(cb),
 	}
 	return cc, nil
+}
+func toString(c *coinAmount, prec int) string {
+	str := c.amount.String()
+
+	length := len(str)
+	buff := &bytes.Buffer{}
+	//将要左移多少位
+
+	if prec >= length {
+		buff.WriteString("0.")
+		for i := 0; i < prec-length+1; i++ {
+			buff.WriteString("0")
+		}
+		buff.WriteString(str)
+	} else {
+		buff.WriteString(str[:length-prec])
+		buff.WriteString(".")
+		buff.WriteString(str[length-prec:])
+	}
+	return buff.String()
 }
 
 /*

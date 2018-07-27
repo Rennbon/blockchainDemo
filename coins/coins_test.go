@@ -18,8 +18,8 @@ type CoinsHandler struct {
 
 //////////////////////////////////////////////////
 var (
-	amountInt    int64 = 111111111111
-	amountString       = "111111111111"
+	amountInt    = float64(111111.111111)
+	amountString = "111111.111111"
 )
 
 func (ch *CoinsHandler) LoadService(g coins.DistributionCoiner) error {
@@ -68,7 +68,17 @@ func Test_StringToCoinAmout(t *testing.T) {
 		t.Error(err)
 		t.Fail()
 	}
-	str1 := ca.String(handler.GetOrginCoinUnit)
+	str1 := ca.String()
+	t.Log(str1)
+}
+func Test_FloatToCoinAmout(t *testing.T) {
+	handler.LoadService(btc)
+	ca, err := handler.FloatToCoinAmout(float64(amountInt))
+	if err != nil {
+		t.Error(err)
+		t.Fail()
+	}
+	str1 := ca.String()
 	t.Log(str1)
 }
 
