@@ -19,7 +19,7 @@ type CoinsHandler struct {
 //////////////////////////////////////////////////
 var (
 	amountInt    = float64(111111.111111)
-	amountString = "111111.111111"
+	amountString = "12345.111111"
 )
 
 func (ch *CoinsHandler) LoadService(g coins.DistributionCoiner) error {
@@ -35,51 +35,68 @@ func (ch *CoinsHandler) LoadService(g coins.DistributionCoiner) error {
 var (
 	btc        *coins.BtcCoin
 	btcSerName = "*coins.BtcCoin"
-	//xlm        *coins.XmlCoin
+	xlm        *coins.XmlCoin
 	xlmSerName = "*coins.XmlCoin"
 	handler    CoinsHandler
 )
 
-//prec会约束DecPart的float精度
-func TestCoinAmount_String(t *testing.T) {
-	handler.LoadService(btc)
-	//t.Log(handler.coinAmount.String(handler.GetOrginCoinUnit))
-}
-
-func TestCoinAmount_Add(t *testing.T) {
-	handler.LoadService(btc)
-	/*ca, err := handler.StringToCoinAmout(amountString)
-	if err != nil {
-		t.Error(err)
-		t.Log("请转到Test_StringToCoinAmout调试")
-		t.Fail()
-	}*/
-	/*	t.Log(ca.Amount.String())
-		t.Log(handler.Amount.String())
-		ca.Add(handler.CoinAmount)
-		t.Log(ca.String(handler.GetOrginCoinUnit))*/
-}
-
 //测试用例模板
 func Test_StringToCoinAmout(t *testing.T) {
-	handler.LoadService(btc)
-	ca, err := handler.StringToCoinAmout(amountString)
+	handler.LoadService(xlm)
+	var (
+		str  string
+		trgt string
+	)
+	switch handler.TypeName {
+	case btcSerName:
+		str = "12345.67890"
+		trgt = "1234567890000"
+		break
+	case xlmSerName:
+		str = "12345.67890"
+		trgt = "12345678900"
+		break
+	}
+	ca, err := handler.StringToCoinAmout(str)
 	if err != nil {
 		t.Error(err)
 		t.Fail()
 	}
-	str1 := ca.String()
-	t.Log(str1)
+
+	if trgt != ca.Val().String() {
+		t.Fail()
+	}
+	t.Logf("\r\n原数据:%s\r\n目标数:%s\r\n实际数:%s", str, trgt, ca.Val().String())
 }
 func Test_FloatToCoinAmout(t *testing.T) {
-	handler.LoadService(btc)
-	ca, err := handler.FloatToCoinAmout(float64(amountInt))
+	handler.LoadService(xlm)
+	var (
+		str  string
+		trgt string
+		flt  float64
+	)
+	switch handler.TypeName {
+	case btcSerName:
+		str = "12345.67890"
+		flt = float64(12345.67890)
+		trgt = "1234567890000"
+		break
+	case xlmSerName:
+		str = "12345.67890"
+		flt = float64(12345.67890)
+		trgt = "12345678900"
+		break
+	}
+	ca, err := handler.FloatToCoinAmout(flt)
 	if err != nil {
 		t.Error(err)
 		t.Fail()
 	}
-	str1 := ca.String()
-	t.Log(str1)
+
+	if trgt != ca.Val().String() {
+		t.Fail()
+	}
+	t.Logf("\r\n原数据:%s\r\n目标数:%s\r\n实际数:%s", str, trgt, ca.Val().String())
 }
 
 //测试用例模板

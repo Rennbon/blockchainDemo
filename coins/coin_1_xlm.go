@@ -1,12 +1,13 @@
 package coins
 
-/*type XmlCoin struct {
-}
+import "strconv"
 
-func (c *XmlCoin) FloatToCoinAmout(f float64) (*CoinAmount, error) {
-	return c.praseCoinAmount(strconv.FormatFloat(f, 'f', 8, 64))
+type XmlCoin struct{}
+
+func (c *XmlCoin) FloatToCoinAmout(f float64) (CoinAmounter, error) {
+	return c.praseCoinAmount(strconv.FormatFloat(f, 'f', 6, 64))
 }
-func (c *XmlCoin) StringToCoinAmout(num string) (ca *CoinAmount, err error) {
+func (c *XmlCoin) StringToCoinAmout(num string) (ca CoinAmounter, err error) {
 	err = regutil.CanPraseBigFloat(num)
 	if err != nil {
 		return
@@ -16,43 +17,44 @@ func (c *XmlCoin) StringToCoinAmout(num string) (ca *CoinAmount, err error) {
 func (c *XmlCoin) GetOrginCoinUnit() CoinUnit {
 	return CoinMicro
 }
-func (c *XmlCoin) praseCoinAmount(num string) (ca *CoinAmount, err error) {
+
+func (c *XmlCoin) praseCoinAmount(num string) (ca CoinAmounter, err error) {
 	return stringToAmount(num, CoinOrdinary, c.GetUnitPrec, c.GetOrginCoinUnit())
-}*/
+}
 
 /*
 	0.000001
 	baseFee       float64 = 0.0001 //小费基数（单位:xlm）
 	baseFeeLemuns uint64  = 100    //小费 (单位：lumens)
 */
-/*func (*XmlCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
+func (*XmlCoin) GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec) {
 	cup = &CoinUnitPrec{}
 	switch cu {
 	case CoinBilli:
-		cup.UnitName = "BXLM"
-		cup.Prec = 14
+		cup.unitName = "BXLM"
+		cup.prec = 14
 		return
 	case CoinMega:
-		cup.UnitName = "MXLM"
-		cup.Prec = 11
+		cup.unitName = "MXLM"
+		cup.prec = 11
 		return
 	case CoinKilo:
-		cup.UnitName = "KXLM"
-		cup.Prec = 9
+		cup.unitName = "KXLM"
+		cup.prec = 9
 		return
 	case CoinOrdinary:
-		cup.UnitName = "XLM"
-		cup.Prec = 6
+		cup.unitName = "XLM"
+		cup.prec = 6
 		return
 	case CoinMilli:
-		cup.UnitName = "KLumens"
-		cup.Prec = 3
+		cup.unitName = "KLumens"
+		cup.prec = 3
 		return
 	case CoinMicro:
-		cup.UnitName = "Lumens"
-		cup.Prec = 0
+		cup.unitName = "Lumens"
+		cup.prec = 0
 		return
 	default:
 		return
 	}
-}*/
+}

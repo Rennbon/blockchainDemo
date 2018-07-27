@@ -4,9 +4,7 @@ import (
 	"strconv"
 )
 
-type BtcCoin struct {
-	*coinAmount
-}
+type BtcCoin struct{}
 
 func (c *BtcCoin) FloatToCoinAmout(f float64) (CoinAmounter, error) {
 	return c.praseCoinAmount(strconv.FormatFloat(f, 'f', 8, 64))

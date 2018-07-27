@@ -2,54 +2,56 @@ package coins
 
 import (
 	"bytes"
-	"github.com/Rennbon/blockchainDemo/errors"
-	"github.com/Rennbon/blockchainDemo/utils"
 	"math/big"
 	"strconv"
+
+	"github.com/Rennbon/blockchainDemo/errors"
+	"github.com/Rennbon/blockchainDemo/utils"
 )
 
-var regutil utils.RegUtil
-var strutil utils.StrUtil
+var (
+	//2个工具类
+	regutil utils.RegUtil
+	strutil utils.StrUtil
+)
 
-//接入币种实现接口
+//币种各种分支接入需要实现的接口
 type DistributionCoiner interface {
+	//float64转指定币种，
+	// 注意:这里将转换为CoinOrdinary CoinUnit = 0对应的值
+	// 比特币转，当期啊你1比特币后精确到小数后8位
+	// 如 123.456 输入对应的等价位123.456 btc 而不是最小的聪
+	// 其中返回CoinAmounter的val对应的值是聪
 	FloatToCoinAmout(f float64) (CoinAmounter, error)
-	//获取新amount
-	//num:数值
-	//trgt：目标精度
+	//同FloatToCoinAmout
+	// float64替换为string
 	StringToCoinAmout(num string) (CoinAmounter, error)
 	//获取指定单位对应的精度及单位名称
 	GetUnitPrec(cu CoinUnit) (cup *CoinUnitPrec)
-	//获取元精度，就是币种最小单位，比如比特币的聪对应的单位
+	//获取元精度，就是币种最小单位，比如比特币返回的必须是聪
 	GetOrginCoinUnit() CoinUnit
 }
 
+//实现
 type CoinAmounter interface {
-	val() *big.Int
+	Val() *big.Int
 	String() string
+	ToString(target CoinUnit, unitPrec getUnitPrec, withUnit bool) string
 	Float64() (float64, error)
 	Add(amount CoinAmounter) error
 	Sub(amount CoinAmounter) error
 	Mul(amount CoinAmounter) error
 }
 
-//代币单位
-type coinUnitName string
+//币种单位进度
 type CoinUnit int8
-
-//金额
-type coinAmount struct {
-	amount        *big.Int //基本代币开始计算，为正整数，如比特币的聪，最基本单位
-	*CoinUnitPrec          //当前显示需要换算的单位，用作处理amount to string时需要加的小数点位置
-}
-type CoinUnitPrec struct {
-	coinUnit CoinUnit     //精度标准位
-	prec     int          //小数精度
-	unitName coinUnitName //单位字符串
-}
 
 //单位层次，普通单位上下各三层，一共七层
 //如果碰到不够的再加
+//例：
+// 比特币：123.456BTC 对应的是CoinOrdinary:0
+// 恒星币：123.456XLM 对应的是CoinOrdinary:0
+//		  123456lumens 对应的是CoinMicro:-6
 const (
 	CoinBilli    CoinUnit = 9
 	CoinMega     CoinUnit = 6
@@ -60,45 +62,106 @@ const (
 	CoinBox      CoinUnit = -8
 )
 
-//按照
+//币种计算金额
+//㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏
+//㊍																									   ㊎
+//㊌ 	important:																					   ㊍
+//㊋   						   论单位的换算，最终对应的价值都是一样的										   ㊌
+//㊏  						  柯南说了，真相只有一个，管这个叫真相模式									   ㊋
+//㊎ 				    所以：*CoinUnitPrec 只代表String()时以什么单位转换成字符串						   ㊏
+//㊍					 而amount永远只有一个精度，他没有小数，那就是比特币的聪，恒星币的流明					   ㊎
+//㊌																									   ㊍
+//㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌㊋㊏㊎㊍㊌
+type coinAmount struct {
+	amount        *big.Int //基本代币开始计算，为正整数，如比特币的聪，最基本单位
+	*CoinUnitPrec          //当前显示需要换算的单位，用作处理amount to string时需要加的小数点位置
+}
+
+//精度（关系,3个属性代表同一个事实）
+//例：(BTC)
+// 123.456 BTC
+//	coinUnit : 0
+//  prec     : 8
+// 	unitName : BTC
+type CoinUnitPrec struct {
+	coinUnit CoinUnit //精度标准位
+	prec     int      //小数精度
+	unitName string   //单位字符串
+}
+
+//func 类型
 type getUnitPrec func(cu CoinUnit) (cup *CoinUnitPrec)
 
-func (c *coinAmount) val() *big.Int {
+//0小数精度情况下的金额值
+func (c *coinAmount) Val() *big.Int {
 	return c.amount
 }
 
+//以指定精度输出对应的字符串
+//target:目标类型
+//unitPrec:获取对应币种的UnitPrec对应方案（如btc何xlm的最小精确度不一样）
+//withUnit:是否显示单位（123.456 BTC）
+func (c *coinAmount) ToString(target CoinUnit, unitPrec getUnitPrec, withUnit bool) string {
+	up := unitPrec(target)
+	str := toString(c, up.prec)
+	if withUnit {
+		buff := &bytes.Buffer{}
+		buff.WriteString(str)
+		buff.WriteString(" ")
+		buff.WriteString(up.unitName)
+		str = buff.String()
+	}
+	return str
+}
+
+//金额以浮点数显示
+//注意，这里默认输出为金额实体内部对应存储的精度
 func (c *coinAmount) Float64() (float64, error) {
 	f := c.String()
 	return strconv.ParseFloat(f, 64)
 }
+
+//金额以字符串显示
+//注意，这里默认输出为金额实体内部对应存储的精度
 func (c *coinAmount) String() string {
 	return toString(c, c.prec)
 }
 
+//金额相加
+//amount:需要相加的对象
 func (c *coinAmount) Add(amount CoinAmounter) error {
 	if amount == nil {
 		return errors.ERR_PARAM_CANNOT_NIL
 	}
-	c.amount.Add(c.amount, amount.val())
+	c.amount.Add(c.amount, amount.Val())
 	return nil
 }
 
+//金额相减
+//amount:需要相减的对象
 func (c *coinAmount) Sub(amount CoinAmounter) error {
 	if amount == nil {
 		return errors.ERR_PARAM_CANNOT_NIL
 	}
-	c.amount.Sub(c.amount, amount.val())
+	c.amount.Sub(c.amount, amount.Val())
 	return nil
 }
 
+//金额相乘
+//amount:需要相乘的对象
 func (c *coinAmount) Mul(amount CoinAmounter) error {
 	if amount == nil {
 		return errors.ERR_PARAM_CANNOT_NIL
 	}
-	c.amount.Mul(c.amount, amount.val())
+	c.amount.Mul(c.amount, amount.Val())
 	return nil
 }
 
+//字符串转金额
+//str:数字字符串
+//cb:目标单位
+//gupfunc：获取单位的方法
+//origin:最小单位（小数精确为0的最小单位）
 func stringToAmount(str string, cb CoinUnit, gupfunc getUnitPrec, origin CoinUnit) (ca CoinAmounter, err error) {
 	l, r, err := strutil.SplitStrToNum(str, false)
 	if err != nil {
