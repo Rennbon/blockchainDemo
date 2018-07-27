@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Rennbon/blockchainDemo/coins"
 	"github.com/Rennbon/blockchainDemo/config"
 	"github.com/stellar/go/build"
 	"github.com/stellar/go/clients/horizon"
@@ -44,6 +45,7 @@ func initXlmClinet(conf *config.XlmConf) {
 }
 
 var (
+	xlmcoin    *coins.XmlCoin
 	certXlmSrv certs.XlmCertService
 	//环境变量
 	client  *horizon.Client
@@ -132,21 +134,24 @@ func (*XlmService) GetNewAddress(account string, mode AcountRunMode) (address, a
 	}
 	return key.Address, account, nil
 }
-func (*XlmService) GetBalanceInAddress(address string) (balance float64, err error) {
+func (*XlmService) GetBalanceInAddress(address string) (balance coins.CoinAmounter, err error) {
 	account, err := client.LoadAccount(address)
 	if err != nil {
-		return 0, err
+		return
 	}
-	bls := float64(0)
+	balance, err = xlmcoin.StringToCoinAmout("0")
+	if err != nil {
+		return
+	}
 	for _, v := range account.Balances {
 		fmt.Println(v.Balance)
-		curBls, err := strconv.ParseFloat(v.Balance, 64)
-		if err != nil {
-			return 0, err
+		f, errinner := xlmcoin.StringToCoinAmout("0")
+		if errinner != nil {
+			err = errinner
 		}
-		bls += curBls
+		balance.Add(f)
 	}
-	return bls, nil
+	return
 }
 
 //转账

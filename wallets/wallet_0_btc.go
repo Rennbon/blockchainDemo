@@ -104,18 +104,22 @@ func (*BtcService) CheckAddressExists(pubKey string) error {
 }
 
 //获取账户余额
-func (*BtcService) GetBalanceInAddress(address string) (balance *coins.CoinAmount, err error) {
+func (*BtcService) GetBalanceInAddress(address string) (balance coins.CoinAmounter, err error) {
 	unspents, err := getUnspentByAddress(address)
 	if err != nil {
 		return
 	}
+	balance, err = btcCoin.StringToCoinAmout("0")
+	if err != nil {
+		return
+	}
 	for _, v := range unspents {
-		//todo 这里没改完，coinamount需要增加相加相减的方法
-		//balance += v.Amount
-		balance, err = btcCoin.FloatToCoinAmout(v.Amount)
-		if err != nil {
+		f, errinner := btcCoin.FloatToCoinAmout(v.Amount)
+		if errinner != nil {
+			err = errinner
 			return
 		}
+		balance.Add(f)
 	}
 	return
 }

@@ -1,6 +1,7 @@
 package wallets_test
 
 import (
+	"github.com/Rennbon/blockchainDemo/coins"
 	"github.com/Rennbon/blockchainDemo/wallets"
 	"reflect"
 	"strconv"
@@ -64,7 +65,7 @@ func TestGetNewAddress(t *testing.T) {
 func TestGetBalanceInAddress(t *testing.T) {
 	handler.LoadService(btc)
 	var (
-		balance float64
+		balance coins.CoinAmounter
 		err     error
 	)
 	switch handler.TypeName {
@@ -78,8 +79,8 @@ func TestGetBalanceInAddress(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	bal := strconv.FormatFloat(balance, 'f', 8, 64)
-	t.Log(bal)
+
+	t.Log(balance.String())
 }
 
 //测试账号到账号
