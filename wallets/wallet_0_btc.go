@@ -20,7 +20,6 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
-	"sync"
 	"time"
 )
 
@@ -172,10 +171,7 @@ func btcExcuteTxHash() {
 	}
 }
 
-func getTxResult(txHash *chainhash.Hash) (<-chan *TxResult, error) {
-	txHash4check <- txHash
 
-}
 
 /////////////////////////////////////////全局接口///////START////////////////////////////////////////
 /*
@@ -242,7 +238,7 @@ func (*BtcService) GetBalanceInAddress(address string) (balance coins.CoinAmount
 //addrForm来源地址，addrTo去向地址
 //transfer 转账金额
 //fee 小费
-func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter) (txId string, txrchan <-chan *TxResult, err error) {
+func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter,txrchan chan<- *TxResult) (txId string, err error) {
 	//数据库获取prv pub key等信息，便于调试--------START------
 	actf, err := dhSrv.GetAccountByAddress(addrFrom)
 	if err != nil {
@@ -364,7 +360,7 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee c
 	//大6的时候去获取当前TX是否在公链有效
 	dhSrv.AddTx(txHash.String(), addrFrom, []string{addrFrom, addrTo})
 
-	return txHash.String(), btcTxRet, nil
+	return txHash.String(), nil
 }
 
 //验证交易是否被公链证实
