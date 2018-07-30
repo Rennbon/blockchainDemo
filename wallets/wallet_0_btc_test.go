@@ -36,3 +36,10 @@ func TestGetTxByAddress(t *testing.T) {
 	}
 	fmt.Println(txs)
 }
+
+func TestGetRawTransaction(t *testing.T) {
+	getRawTransaction("e3f0129da50920c2a01492eecc9c13acbefd9b8a9a46af72626141f23c774030")
+}
+func TestGetBlockInfo(t *testing.T) {
+	getBlockInfo("53dc56749eac5f46820fcdee93e0c1e4242b07a129b4635cc6e4e57c4d69ba76")
+}

@@ -33,6 +33,8 @@ var (
 	xlmCoin    coins.XmlCoin
 	xlmStrName = "*wallets.XlmService"
 	handler    CoinHandler
+
+	txrchan chan *wallets.TxResult
 )
 
 /* 相关接口
@@ -88,23 +90,27 @@ func TestGetBalanceInAddress(t *testing.T) {
 
 //测试账号到账号
 func TestSendAddressToAddress(t *testing.T) {
-	handler.LoadService(xlm)
+	handler.LoadService(btc)
 	var (
 		txId          string
 		err           error
 		transfer, fee coins.CoinAmounter
+		ch            <-chan *wallets.TxResult
 	)
-
+	ch = make(chan *wallets.TxResult)
 	switch handler.TypeName {
 	case btcStrName:
-		transfer, _ = btcCoin.StringToCoinAmout("10")
+		transfer, _ = btcCoin.StringToCoinAmout("1")
 		fee, _ = btcCoin.StringToCoinAmout("0.0001")
-		txId, err = handler.SendAddressToAddress("mhAfGecTPa9eZaaNkGJcV7fmUPFi3T2Ki8", "n3ZT36odeAbur87bTdR6JGCtnWaquGgFZ2", transfer, fee)
+		txId, ch, err = handler.SendAddressToAddress("mhAfGecTPa9eZaaNkGJcV7fmUPFi3T2Ki8", "n3ZT36odeAbur87bTdR6JGCtnWaquGgFZ2", transfer, fee)
+		for c := range ch {
+			t.Log(c)
+		}
 		break
 	case xlmStrName:
 		transfer, _ = xlmCoin.StringToCoinAmout("10")
 		fee, _ = xlmCoin.StringToCoinAmout("0.0001")
-		txId, err = handler.SendAddressToAddress("n4UYCTwXvJ7ijCC9ERGr7qYAuJbiLjUcwT", "mvY3JLZNZrvRewbgMZwvj9CHUJWtQeZjff", transfer, transfer)
+		txId, _, err = handler.SendAddressToAddress("n4UYCTwXvJ7ijCC9ERGr7qYAuJbiLjUcwT", "mvY3JLZNZrvRewbgMZwvj9CHUJWtQeZjff", transfer, transfer)
 		break
 	}
 

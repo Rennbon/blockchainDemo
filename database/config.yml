@@ -5,6 +5,6 @@ btcconf:
   passwd: "qwe123456"
 mongo:
   addr: "localhost:27017"
-  timeout: 500
+  timeout: 60
   poolLimit: 500
   database: "blockChain"

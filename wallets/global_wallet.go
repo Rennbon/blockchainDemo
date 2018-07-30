@@ -24,10 +24,22 @@ type Walleter interface {
 	//获取指定地址的余额
 	GetBalanceInAddress(string) (balance coins.CoinAmounter, err error)
 	//账户转钱到账户
-	SendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter) (txId string, err error)
+	SendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter) (txId string, txrchan <-chan *TxResult, err error)
 	//检测交易状态（交易是否被确认）
 	//txId:交易id
 	CheckTxMergerStatus(txId string) error
 	//检测地址是否有效（在公链中存在）
 	CheckAddressExists(string) error
+}
+
+type TxResult struct {
+	TxId     string
+	AddInfos []*TxAddressInfo
+	Status   bool
+	Err      error
+}
+
+type TxAddressInfo struct {
+	Address []string
+	Amount  coins.CoinAmounter
 }

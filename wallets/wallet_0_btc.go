@@ -2,12 +2,13 @@ package wallets
 
 import (
 	"encoding/hex"
-	"fmt"
+	"log"
 
 	"github.com/Rennbon/blockchainDemo/config"
 	"github.com/Rennbon/blockchainDemo/database"
 	"github.com/Rennbon/blockchainDemo/errors"
-	"log"
+
+	"fmt"
 
 	"github.com/Rennbon/blockchainDemo/certs"
 	"github.com/Rennbon/blockchainDemo/coins"
@@ -19,6 +20,8 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
+	"sync"
+	"time"
 )
 
 type BtcService struct {
@@ -52,6 +55,10 @@ func initBtcClinet(conf *config.BtcConf) {
 		btcEnv = &chaincfg.RegressionNetParams
 		break
 	}
+	//先假定100容量，这里最好用队列缓存
+	tb4check = make(chan *txblcok, 100)
+	txHash4check = make(chan *chainhash.Hash, 100)
+	btcTxRet = make(chan *TxResult, 100)
 	log.Println("coins=>btc_wallet=>initClinet sccuess.")
 }
 
@@ -61,7 +68,114 @@ var (
 	//环境变量
 	btcClient *rpcclient.Client
 	btcEnv    *chaincfg.Params
+
+	//确认相关
+	confirmNum   = int32(6)
+	tb4check     chan *txblcok
+	txHash4check chan *chainhash.Hash //txId
+	blockHeight  int64
+
+	btcTxRet chan *TxResult
 )
+
+type txblcok struct {
+	txHash   *chainhash.Hash
+	blockNum int64 //创建时区块高度
+	TargetBN int64 //需要验证的区块高度
+}
+
+func pushTxResultIntoBtcTxRet() {
+	for tb := range tb4check {
+	JUSTDOIT:
+		if tb.TargetBN >= blockHeight {
+			txInfo, err := btcClient.GetRawTransactionVerbose(tb.txHash)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			if txInfo.Confirmations >= uint64(confirmNum) {
+				tr := &TxResult{
+					TxId:   tb.txHash.String(),
+					Status: true,
+					Err:    nil,
+				}
+				for _, v := range txInfo.Vout {
+					amout, _ := btcCoin.FloatToCoinAmout(v.Value)
+					tai := &TxAddressInfo{
+						Address: v.ScriptPubKey.Addresses,
+						Amount:  amout,
+					}
+					tr.AddInfos = append(tr.AddInfos, tai)
+				}
+				btcTxRet <- tr
+			}
+		} else {
+			//延时操作
+			tick := time.NewTicker(5 * time.Second)
+			for {
+				select {
+				case <-tick.C:
+					goto JUSTDOIT
+				}
+			}
+		}
+	}
+}
+
+func btcMonitoringStation() {
+	//轮询区块高度
+	tick := time.NewTicker(5 * time.Second)
+	for {
+		select {
+		case <-tick.C:
+			height, err := btcClient.GetBlockCount()
+			if err != nil {
+				log.Println(err)
+			} else {
+				if height > blockHeight {
+					blockHeight = height
+				}
+			}
+		}
+	}
+}
+
+//处理tx交易信息
+//通过txHash获取tx详情，然后通过tx详情中的blockHash获取当前tx所在的block高度
+//将txHash 和 block高度，以及确认的block高度推入tb4check channel
+func btcExcuteTxHash() {
+	for txHash := range txHash4check {
+		go func(txHash *chainhash.Hash) {
+			txinfo, err := btcClient.GetTransaction(txHash)
+			if err != nil {
+				log.Printf("txId:%s 获取tx详情失败\r\n", txHash.String())
+				return
+			} else {
+				blockHash, err := chainhash.NewHashFromStr(txinfo.BlockHash)
+				if err != nil {
+					log.Printf("blockHash:%s string to hash失败\r\n", txinfo.BlockHash)
+					return
+				}
+				blockInfo, err := btcClient.GetBlockHeaderVerbose(blockHash)
+				if err != nil {
+					log.Printf("txId:%s 获取block详情失败\r\n", txinfo.BlockHash)
+					return
+				}
+				tb := &txblcok{
+					txHash:   txHash,
+					blockNum: int64(blockInfo.Height),
+					TargetBN: int64(blockInfo.Height + confirmNum),
+				}
+				tb4check <- tb
+			}
+		}(txHash)
+	}
+}
+
+func getTxResult(txHash *chainhash.Hash) (<-chan *TxResult, error) {
+	txHash4check <- txHash
+
+}
 
 /////////////////////////////////////////全局接口///////START////////////////////////////////////////
 /*
@@ -128,7 +242,7 @@ func (*BtcService) GetBalanceInAddress(address string) (balance coins.CoinAmount
 //addrForm来源地址，addrTo去向地址
 //transfer 转账金额
 //fee 小费
-func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter) (txId string, err error) {
+func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter) (txId string, txrchan <-chan *TxResult, err error) {
 	//数据库获取prv pub key等信息，便于调试--------START------
 	actf, err := dhSrv.GetAccountByAddress(addrFrom)
 	if err != nil {
@@ -245,12 +359,12 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee c
 	if err != nil {
 		return
 	}
+	txHash4check <- txHash
 	//这里最好也记一下当前的block count,以便监听block count比此时高度
 	//大6的时候去获取当前TX是否在公链有效
 	dhSrv.AddTx(txHash.String(), addrFrom, []string{addrFrom, addrTo})
-	fmt.Println("Transaction successfully signed")
-	fmt.Println(txHash.String())
-	return txHash.String(), nil
+
+	return txHash.String(), btcTxRet, nil
 }
 
 //验证交易是否被公链证实
@@ -407,6 +521,7 @@ type addressToKey struct {
 }
 
 /////////////////////////////////////////内部方法///////end////////////////////////////////////////
+
 ////////////////////////其他方法////////////////////////////////////////
 /*
 *获取所有account
@@ -444,4 +559,26 @@ func (*BtcService) GetTxByAddress(addrs []string, name string) (interface{}, err
 		return nil, err
 	}
 	return txs, nil
+}
+
+func getBlockInfo(blockId string) error {
+	blockHash, err := chainhash.NewHashFromStr(blockId)
+	if err != nil {
+		return err
+	}
+	blockInfo, err := btcClient.GetBlockHeaderVerbose(blockHash)
+	if err != nil {
+		return err
+	}
+	fmt.Println(blockInfo)
+	return nil
+}
+func getRawTransaction(txId string) error {
+	hash, err := chainhash.NewHashFromStr(txId)
+	if err != nil {
+		return err
+	}
+	txinfo, err := btcClient.GetRawTransactionVerbose(hash)
+	fmt.Println(txinfo)
+	return nil
 }

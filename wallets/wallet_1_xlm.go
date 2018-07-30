@@ -175,7 +175,7 @@ func (*XlmService) GetBalanceInAddress(address string) (balance coins.CoinAmount
 //addrForm来源地址，addrTo去向地址
 //transfer 转账金额
 //fee 小费
-func (c *XlmService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter) (txId string, err error) {
+func (c *XlmService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter) (txId string, txrchan <-chan *TxResult, err error) {
 	//数据库获取prv pub key等信息，便于调试--------START------
 	actf, err := dhSrv.GetAccountByAddress(addrFrom)
 	if err != nil {
@@ -235,7 +235,7 @@ func (c *XlmService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee
 	}
 	//存储到数据库，方便检验
 	dhSrv.AddTx(resp.Hash, addrFrom, []string{addrTo})
-	return resp.Hash, nil
+	return resp.Hash, nil, nil
 }
 
 func (*XlmService) CheckTxMergerStatus(txId string) error {
