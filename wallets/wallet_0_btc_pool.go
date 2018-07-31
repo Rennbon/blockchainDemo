@@ -40,36 +40,50 @@ var (
 	tick        = time.NewTicker(5 * time.Second) //扫描计区块等周期计时器
 	btcTimeM, _ = time.ParseDuration("10m")       //同上延迟localpool deadline用
 	historyWG   = new(sync.WaitGroup)             //监听历史池
-	excuPool    = make(chan *txexcuting, 20)      //等到处理的通道，理论上也是单位时间段最多10个左右，最多同一周期并发出现20个，所以cap设置20就够了
+
+	cq = &confmQ{
+		q: make([]*txexcuting, 0, localPoolCount*3),
+		m: new(sync.Mutex),
+	}
+	//前后预留2批，共3批，不进块的情况下这个会上升，当恢复后需要释放
+	excuCH = make(chan *txexcuting, localPoolCount*2) //等到处理的通道，理论上也是单位时间段最多10个左右，最多同一周期并发出现20个，所以cap设置20就够了
 )
+
+//小于当前块的需要验证的tx池
+type confmQ struct {
+	q []*txexcuting
+	m *sync.Mutex
+}
 
 //local池，
 type btcLocalPool struct {
-	m        sync.RWMutex
+	m        *sync.RWMutex
 	deadline time.Time //死亡时间
 	size     int       //数量
 }
 
 //全局池，只维护计数
 type btcGlobalPool struct {
-	m    sync.RWMutex
+	m    *sync.RWMutex
 	size int        //数量
 	txcs []*txcache //tx组
 }
 
 //历史池，这里才开始执行增伤查
 type btcHistoryPool struct {
-	m       sync.RWMutex
+	m       *sync.RWMutex
 	size    int           //总数
 	txcsing []*txexcuting //处理的交易
 	offset  int           //当前处理位置，指提交交易并广播
 }
 
 type txexcuting struct {
-	txHash  *chainhash.Hash //txhash
-	blockH  int32           //所在的区块高度
-	targetH int32           //目标区块高度
-	status  bool            //状态
+	txHash *chainhash.Hash //txhash
+	//txHash  string
+	blockH  int64 //所在的区块高度
+	targetH int64 //目标区块高度
+	status  bool  //状态
+	excount int8  //执行过的次数，超过一定次数，执行plan X（移出并日志）
 	*txcache
 }
 type txcache struct {
@@ -89,14 +103,25 @@ type txblcok struct {
 }
 
 //todo 消费处理池，执行TX
-func consumeeExcuPool() {
+func consumeeExcuCH() {
 	tick4Excu := time.NewTicker(5 * time.Second)
 	for {
 		select {
-		case tick4Excu.C:
-			for _ := range excuPool {
+		case <-tick4Excu.C:
+			for ch := range excuCH {
 				//todo 执行tx并广播到共链，(需要分离SendAddressToAddress)
 				//todo 广播成功后推入历史池监听
+				/*ch.txHash = time.Now().String()
+				ch.blockH = 0
+				ch.targetH = 20*/
+
+				btcHPL.m.Lock()
+				defer btcHPL.m.Unlock()
+				{
+					btcHPL.size++
+					btcHPL.txcsing = append(btcHPL.txcsing, ch)
+				}
+
 			}
 		}
 	}
@@ -108,11 +133,62 @@ func consumeHistoryPool() {
 
 }
 
+//填充需要当前时间检测的tx的公链状态
+func fillConfmQ() {
+	for {
+		select {
+		case <-tick.C:
+			btcHPL.m.Lock()
+			defer btcHPL.m.Unlock()
+			{ //锁池
+				for k, v := range btcHPL.txcsing {
+					if v.targetH <= blockHeight && !v.status {
+						cq.m.Lock()
+						defer cq.m.Unlock()
+						{
+							cq.q = append(cq.q, v)
+							btcHPL.txcsing[k].status = true
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+//监听公链
+//todo 	轮询tx,检测到ok的需要close 内部chan状态
+func listenMainNet() {
+	for k, cur := range cq.q {
+		txInfo, err := btcClient.GetRawTransactionVerbose(cur.txHash)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		if txInfo.Confirmations >= uint64(confirmNum) {
+			tr := &TxResult{
+				TxId:   cur.txHash.String(),
+				Status: true,
+				Err:    nil,
+			}
+			for _, v := range txInfo.Vout {
+				amout, _ := btcCoin.FloatToCoinAmout(v.Value)
+				tai := &TxAddressInfo{
+					Address: v.ScriptPubKey.Addresses,
+					Amount:  amout,
+				}
+				tr.AddInfos = append(tr.AddInfos, tai)
+			}
+		}
+
+	}
+}
+
 //todo 计时器每满一次，清空local池，首先去全局同步到本地
 func (*btcLocalPool) Restart() {
 	for {
 		select {
-		case tick.C:
+		case <-tick.C:
 			btcLPL.m.Lock()
 			defer btcLPL.m.Unlock()
 			{ //本地锁池
@@ -136,7 +212,7 @@ func (*btcLocalPool) Restart() {
 
 						//处理chan+size
 						for _, v := range btcGPL.txcs {
-							excuPool <- &txexcuting{
+							excuCH <- &txexcuting{
 								txcache: v,
 							}
 						}
@@ -179,7 +255,7 @@ func (*btcLocalPool) Push(addrFrom, addrTo string, transfer, fee coins.CoinAmoun
 				txcache: tc,
 			}
 			//处理chan+1
-			excuPool <- tcing
+			excuCH <- tcing
 		}
 	}
 }
@@ -264,7 +340,7 @@ func (ex *txexcuting) fillBlockHeight() {
 			log.Printf("txId:%s 获取block详情失败\r\n", txinfo.BlockHash)
 			return
 		}
-		ex.blockH = blockInfo.Height
-		ex.targetH = blockInfo.Height + confirmNum
+		ex.blockH = int64(blockInfo.Height)
+		ex.targetH = int64(blockInfo.Height + confirmNum)
 	}
 }
