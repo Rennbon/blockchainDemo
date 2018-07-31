@@ -175,7 +175,7 @@ func (*XlmService) GetBalanceInAddress(address string) (balance coins.CoinAmount
 //addrForm来源地址，addrTo去向地址
 //transfer 转账金额
 //fee 小费
-func (c *XlmService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter,txrchan chan<- *TxResult) (txId string,err error) {
+func (c *XlmService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter) (txId string, err error) {
 	//数据库获取prv pub key等信息，便于调试--------START------
 	actf, err := dhSrv.GetAccountByAddress(addrFrom)
 	if err != nil {

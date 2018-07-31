@@ -53,10 +53,6 @@ func initBtcClinet(conf *config.BtcConf) {
 		btcEnv = &chaincfg.RegressionNetParams
 		break
 	}
-	//先假定100容量，这里最好用队列缓存
-	tb4check = make(chan *txblcok, 100)
-	txHash4check = make(chan *chainhash.Hash, 100)
-	btcTxRet = make(chan *TxResult, 100)
 	log.Println("coins=>btc_wallet=>initClinet sccuess.")
 }
 
@@ -66,14 +62,6 @@ var (
 	//环境变量
 	btcClient *rpcclient.Client
 	btcEnv    *chaincfg.Params
-
-	//确认相关
-	confirmNum   = int32(6)
-	tb4check     chan *txblcok
-	txHash4check chan *chainhash.Hash //txId
-	// blockHeight  int64
-
-	btcTxRet chan *TxResult
 )
 
 /////////////////////////////////////////全局接口///////START////////////////////////////////////////
@@ -141,7 +129,7 @@ func (*BtcService) GetBalanceInAddress(address string) (balance coins.CoinAmount
 //addrForm来源地址，addrTo去向地址
 //transfer 转账金额
 //fee 小费
-func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter, txrchan chan<- *TxResult) (txId string, err error) {
+func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter) (txId string, err error) {
 	//数据库获取prv pub key等信息，便于调试--------START------
 	actf, err := dhSrv.GetAccountByAddress(addrFrom)
 	if err != nil {
@@ -258,7 +246,6 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee c
 	if err != nil {
 		return
 	}
-	txHash4check <- txHash
 	//这里最好也记一下当前的block count,以便监听block count比此时高度
 	//大6的时候去获取当前TX是否在公链有效
 	dhSrv.AddTx(txHash.String(), addrFrom, []string{addrFrom, addrTo})
