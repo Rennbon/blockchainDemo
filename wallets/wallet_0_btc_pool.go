@@ -109,26 +109,26 @@ func consumeeExcuCH() {
 			for ch := range excuCH {
 				//todo 执行tx并广播到共链，(需要分离SendAddressToAddress)
 				//todo 广播成功后推入历史池监听
-				/*ch.txHash = time.Now().String()
-				ch.blockH = 0
-				ch.targetH = 20*/
-
-				btcHPL.m.Lock()
-				defer btcHPL.m.Unlock()
-				{
-					btcHPL.size++
-					btcHPL.txcsing = append(btcHPL.txcsing, ch)
+				btcSer := &BtcService{}
+				txid, err := btcSer.SendAddressToAddress(ch.addf, ch.addt, ch.transfer, ch.fee)
+				if err != nil {
+					//TODO 日志
+				} else {
+					//填充块高度
+					txe := &txexcuting{}
+					txe.fillBlockHeight()
+					txe.txHash, _ = chainhash.NewHashFromStr(txid)
+					//todo 扔给历史池
+					btcHPL.m.Lock()
+					defer btcHPL.m.Unlock()
+					{
+						btcHPL.size++
+						btcHPL.txcsing = append(btcHPL.txcsing, txe)
+					}
 				}
-
 			}
 		}
 	}
-}
-
-//todo 监听历史池，处理交易状态
-func consumeHistoryPool() {
-	//监听历史池，有更新直接消费
-
 }
 
 //填充需要当前时间检测的tx的公链状态
@@ -159,10 +159,6 @@ func fillConfmQ() {
 			}
 		}
 	}
-}
-
-func removeConfirmed(txhash []*chainhash.Hash) {
-
 }
 
 //监听公链
@@ -198,23 +194,11 @@ func listenMainNet() {
 				qneed = append(qneed)
 			}
 		}
-
 		//这里可以封装成方法
 		if len(qneed) == 0 {
 			cq.q = make([]*txexcuting, 0, localPoolCount*3)
 		} else {
 			cq.q = GetSliceByIndex(cq.q, qneed)
-			/*qnew := make([]*txexcuting, 0, localPoolCount*3)
-			for k, v := range cq.q {
-				for _, qv := range qneed {
-					if qv == k {
-						qnew = append(qnew, v)
-					} else if qv > k {
-						break
-					}
-				}
-			}
-			cq.q = qnew*/
 		}
 	}
 }
