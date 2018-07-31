@@ -102,7 +102,7 @@ func TestSendAddressToAddress(t *testing.T) {
 	case btcStrName:
 		transfer, _ = btcCoin.StringToCoinAmout("1")
 		fee, _ = btcCoin.StringToCoinAmout("0.0001")
-		txId, ch, err = handler.SendAddressToAddress("mhAfGecTPa9eZaaNkGJcV7fmUPFi3T2Ki8", "n3ZT36odeAbur87bTdR6JGCtnWaquGgFZ2", transfer, fee)
+		txId, err = handler.SendAddressToAddress("mhAfGecTPa9eZaaNkGJcV7fmUPFi3T2Ki8", "n3ZT36odeAbur87bTdR6JGCtnWaquGgFZ2", transfer, fee)
 		for c := range ch {
 			t.Log(c)
 		}
@@ -110,7 +110,7 @@ func TestSendAddressToAddress(t *testing.T) {
 	case xlmStrName:
 		transfer, _ = xlmCoin.StringToCoinAmout("10")
 		fee, _ = xlmCoin.StringToCoinAmout("0.0001")
-		txId, _, err = handler.SendAddressToAddress("n4UYCTwXvJ7ijCC9ERGr7qYAuJbiLjUcwT", "mvY3JLZNZrvRewbgMZwvj9CHUJWtQeZjff", transfer, transfer)
+		txId, err = handler.SendAddressToAddress("n4UYCTwXvJ7ijCC9ERGr7qYAuJbiLjUcwT", "mvY3JLZNZrvRewbgMZwvj9CHUJWtQeZjff", transfer, transfer)
 		break
 	}
 

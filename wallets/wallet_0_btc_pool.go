@@ -78,12 +78,11 @@ type btcHistoryPool struct {
 }
 
 type txexcuting struct {
-	txHash *chainhash.Hash //txhash
-	//txHash  string
-	blockH  int64 //所在的区块高度
-	targetH int64 //目标区块高度
-	status  bool  //状态
-	excount int8  //执行过的次数，超过一定次数，执行plan X（移出并日志）
+	txHash  *chainhash.Hash //txhash
+	blockH  int64           //所在的区块高度
+	targetH int64           //目标区块高度
+	status  bool            //状态
+	excount int8            //执行过的次数，超过一定次数，执行plan X（移出并日志）
 	*txcache
 }
 type txcache struct {
@@ -93,7 +92,6 @@ type txcache struct {
 	transfer coins.CoinAmounter //交易金额
 	fee      coins.CoinAmounter //交易小费
 	txrchan  chan<- *TxResult   //chan维持
-
 }
 
 type txblcok struct {
@@ -139,48 +137,85 @@ func fillConfmQ() {
 		select {
 		case <-tick.C:
 			btcHPL.m.Lock()
+			txhasharr := []*chainhash.Hash{}
 			defer btcHPL.m.Unlock()
 			{ //锁池
+				qrm := []int{}
 				for k, v := range btcHPL.txcsing {
 					if v.targetH <= blockHeight && !v.status {
 						cq.m.Lock()
 						defer cq.m.Unlock()
 						{
+							txhasharr = append(txhasharr, v.txHash)
 							cq.q = append(cq.q, v)
-							btcHPL.txcsing[k].status = true
+							qrm = append(qrm, k)
 						}
 					}
+				}
+				//移除老数据
+				if len(qrm) > 0 {
+					btcHPL.txcsing = RmoveSliceByIndex(btcHPL.txcsing, qrm)
 				}
 			}
 		}
 	}
 }
 
+func removeConfirmed(txhash []*chainhash.Hash) {
+
+}
+
 //监听公链
 //todo 	轮询tx,检测到ok的需要close 内部chan状态
 func listenMainNet() {
-	for k, cur := range cq.q {
-		txInfo, err := btcClient.GetRawTransactionVerbose(cur.txHash)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		if txInfo.Confirmations >= uint64(confirmNum) {
-			tr := &TxResult{
-				TxId:   cur.txHash.String(),
-				Status: true,
-				Err:    nil,
+	cq.m.Lock()
+	defer cq.m.Unlock()
+	{
+		qneed := []int{}
+		for k, cur := range cq.q {
+			txInfo, err := btcClient.GetRawTransactionVerbose(cur.txHash)
+			if err != nil {
+				log.Println(err)
+				continue
 			}
-			for _, v := range txInfo.Vout {
-				amout, _ := btcCoin.FloatToCoinAmout(v.Value)
-				tai := &TxAddressInfo{
-					Address: v.ScriptPubKey.Addresses,
-					Amount:  amout,
+			if txInfo.Confirmations >= uint64(confirmNum) {
+				tr := &TxResult{
+					TxId:   cur.txHash.String(),
+					Status: true,
+					Err:    nil,
 				}
-				tr.AddInfos = append(tr.AddInfos, tai)
+				for _, v := range txInfo.Vout {
+					amout, _ := btcCoin.FloatToCoinAmout(v.Value)
+					tai := &TxAddressInfo{
+						Address: v.ScriptPubKey.Addresses,
+						Amount:  amout,
+					}
+					tr.AddInfos = append(tr.AddInfos, tai)
+				}
+				cq.q[k].txrchan <- tr
+				close(cq.q[k].txrchan)
+			} else {
+				qneed = append(qneed)
 			}
 		}
 
+		//这里可以封装成方法
+		if len(qneed) == 0 {
+			cq.q = make([]*txexcuting, 0, localPoolCount*3)
+		} else {
+			cq.q = GetSliceByIndex(cq.q, qneed)
+			/*qnew := make([]*txexcuting, 0, localPoolCount*3)
+			for k, v := range cq.q {
+				for _, qv := range qneed {
+					if qv == k {
+						qnew = append(qnew, v)
+					} else if qv > k {
+						break
+					}
+				}
+			}
+			cq.q = qnew*/
+		}
 	}
 }
 
@@ -260,6 +295,7 @@ func (*btcLocalPool) Push(addrFrom, addrTo string, transfer, fee coins.CoinAmoun
 	}
 }
 
+//OK
 //监听区块高度，需要放入到Init函数
 func monitoringBtcBlockHeight() {
 	for {
@@ -277,49 +313,12 @@ func monitoringBtcBlockHeight() {
 	}
 }
 
-func pushTxResultIntoBtcTxRet() {
-	for tb := range tb4check {
-	JUSTDOIT:
-		if tb.TargetBN >= blockHeight {
-			txInfo, err := btcClient.GetRawTransactionVerbose(tb.txHash)
-			if err != nil {
-				log.Println(err)
-				continue
-			}
-			if txInfo.Confirmations >= uint64(confirmNum) {
-				tr := &TxResult{
-					TxId:   tb.txHash.String(),
-					Status: true,
-					Err:    nil,
-				}
-				for _, v := range txInfo.Vout {
-					amout, _ := btcCoin.FloatToCoinAmout(v.Value)
-					tai := &TxAddressInfo{
-						Address: v.ScriptPubKey.Addresses,
-						Amount:  amout,
-					}
-					tr.AddInfos = append(tr.AddInfos, tai)
-				}
-				btcTxRet <- tr
-			}
-		} else {
-			//延时操作
-			tick := time.NewTicker(5 * time.Second)
-			for {
-				select {
-				case <-tick.C:
-					goto JUSTDOIT
-				}
-			}
-		}
-	}
-}
-
 //todo 执行交易SendAddressToAddress
 func (ex *txexcuting) excuteTx() {
 
 }
 
+//ok
 //处理tx交易信息
 //通过txHash获取tx详情，然后通过tx详情中的blockHash获取当前tx所在的block高度
 //将txHash 和 block高度，以及确认的block高度推入tb4check channel
@@ -343,4 +342,32 @@ func (ex *txexcuting) fillBlockHeight() {
 		ex.blockH = int64(blockInfo.Height)
 		ex.targetH = int64(blockInfo.Height + confirmNum)
 	}
+}
+func RmoveSliceByIndex(source []*txexcuting, indes []int) []*txexcuting {
+	qnew := make([]*txexcuting, 0, len(source)-len(indes))
+	if len(indes) > 0 {
+		mdl := 0
+		for _, v := range indes {
+			if v == 0 {
+				mdl = 0
+			} else {
+				qnew = append(qnew, source[mdl:v]...)
+				mdl = v + 1
+			}
+		}
+	}
+	return qnew
+}
+func GetSliceByIndex(source []*txexcuting, indes []int) []*txexcuting {
+	qnew := make([]*txexcuting, 0, len(indes))
+	for k, v := range source {
+		for _, qv := range indes {
+			if qv == k {
+				qnew = append(qnew, v)
+			} else if qv > k {
+				break
+			}
+		}
+	}
+	return qnew
 }
