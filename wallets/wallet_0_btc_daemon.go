@@ -25,11 +25,6 @@ import (
 
 var (
 
-	/*//确认相关
-
-	tb4check     chan *txblcok
-	txHash4check chan *chainhash.Hash //txId
-	*/
 	blockHeight    int64
 	confirmNum     = int32(6)
 	localPoolCount = int(10) //本地容器上限
@@ -47,7 +42,20 @@ var (
 	}
 	//前后预留2批，共3批，不进块的情况下这个会上升，当恢复后需要释放
 	excuCH = make(chan *txexcuting, localPoolCount*2) //等到处理的通道，理论上也是单位时间段最多10个左右，最多同一周期并发出现20个，所以cap设置20就够了
+
+
 )
+
+type btcDaemon struct {
+	tick  *time.Ticker  //周期计时器
+	blkHt int64 //btc块高
+	gpl *btcGlobalPool
+	lpl *btcLocalPool
+	hpl *btcHistoryPool
+	cq *confmQ
+	exch chan *txexcuting
+
+}
 
 //小于当前块的需要验证的tx池
 type confmQ struct {
@@ -57,24 +65,23 @@ type confmQ struct {
 
 //local池，
 type btcLocalPool struct {
-	m        *sync.RWMutex
+	m        *sync.Mutex
 	deadline time.Time //死亡时间
 	size     int       //数量
 }
 
 //全局池，只维护计数
 type btcGlobalPool struct {
-	m    *sync.RWMutex
+	m    *sync.Mutex
 	size int        //数量
 	txcs []*txcache //tx组
 }
 
 //历史池，这里才开始执行增伤查
 type btcHistoryPool struct {
-	m       *sync.RWMutex
+	m       *sync.Mutex
 	size    int           //总数
 	txcsing []*txexcuting //处理的交易
-	offset  int           //当前处理位置，指提交交易并广播
 }
 
 type txexcuting struct {
@@ -93,15 +100,41 @@ type txcache struct {
 	fee      coins.CoinAmounter //交易小费
 	txrchan  chan<- *TxResult   //chan维持
 }
+func NewBTCDaemon()(daemon *btcDaemon,err error){
+	d := &btcDaemon{}
+	d.tick = time.NewTicker(5*time.Second)
+	d.blkHt,err = btcClient.GetBlockCount()
+	if err!=nil{
+		panic(err)
+	}
+	d.cq = &confmQ{
+		q: make([]*txexcuting, 0, localPoolCount*3),
+		m: new(sync.Mutex),
+	}
+	d.exch = make(chan *txexcuting, localPoolCount*2)
+	d.gpl = &btcGlobalPool{
+		m: new(sync.Mutex),
+		size:0,
+		txcs:[]*txcache{},
+	}
+	tm, _ = time.ParseDuration("10m")
+	d.lpl = &btcLocalPool{
+		m: new(sync.Mutex),
+		size:0,
+		deadline:time.Now().Add(tm),//当前时间+10分钟
+	}
+	d.hpl = &btcHistoryPool{
+		m: new(sync.Mutex),
+		size:0,
+		txcsing:[]*txexcuting{},
+	}
 
-type txblcok struct {
-	txHash   *chainhash.Hash
-	blockNum int64 //创建时区块高度
-	TargetBN int64 //需要验证的区块高度
+
 }
 
+
 //todo 消费处理池，执行TX
-func consumeeExcuCH() {
+func (d *btcDaemon)consumeeExcuCH() {
 	tick4Excu := time.NewTicker(5 * time.Second)
 	for {
 		select {
@@ -132,7 +165,7 @@ func consumeeExcuCH() {
 }
 
 //填充需要当前时间检测的tx的公链状态
-func fillConfmQ() {
+func (d *btcDaemon)fillConfmQ() {
 	for {
 		select {
 		case <-tick.C:
@@ -163,7 +196,7 @@ func fillConfmQ() {
 
 //监听公链
 //todo 	轮询tx,检测到ok的需要close 内部chan状态
-func listenMainNet() {
+func (d *btcDaemon)listenMainNet() {
 	cq.m.Lock()
 	defer cq.m.Unlock()
 	{
@@ -204,7 +237,7 @@ func listenMainNet() {
 }
 
 //todo 计时器每满一次，清空local池，首先去全局同步到本地
-func (*btcLocalPool) Restart() {
+func (d *btcDaemon)restart() {
 	for {
 		select {
 		case <-tick.C:
@@ -248,7 +281,7 @@ func (*btcLocalPool) Restart() {
 //往local池写数据
 //若local池已满，则写到global池
 //local池的直接写到history池执行tx交易并监听
-func (*btcLocalPool) Push(addrFrom, addrTo string, transfer, fee coins.CoinAmounter, txrchan chan<- *TxResult) {
+func (d *btcDaemon) push(addrFrom, addrTo string, transfer, fee coins.CoinAmounter, txrchan chan<- *TxResult) {
 	btcLPL.m.Lock()
 	defer btcLPL.m.Unlock()
 	{ //本地锁池
@@ -281,7 +314,7 @@ func (*btcLocalPool) Push(addrFrom, addrTo string, transfer, fee coins.CoinAmoun
 
 //OK
 //监听区块高度，需要放入到Init函数
-func monitoringBtcBlockHeight() {
+func (d *btcDaemon)monitoringBtcBlockHeight() {
 	for {
 		select {
 		case <-tick.C:
@@ -327,6 +360,7 @@ func (ex *txexcuting) fillBlockHeight() {
 		ex.targetH = int64(blockInfo.Height + confirmNum)
 	}
 }
+
 func RmoveSliceByIndex(source []*txexcuting, indes []int) []*txexcuting {
 	qnew := make([]*txexcuting, 0, len(source)-len(indes))
 	if len(indes) > 0 {
