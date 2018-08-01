@@ -56,8 +56,7 @@ var (
 	confirmNum     = int32(6)
 	localPoolCount = int(10) //本地容器上限
 	btcTimeM, _ = time.ParseDuration("10m")       //同上延迟localpool deadline用
-	btcD = NewBTCDaemon()
-
+	btcD = NewBTCDaemon(time.NewTicker(10*time.Minute))
 /*	btcGPL      = &btcGlobalPool{}                //全局池
 	btcLPL      = &btcLocalPool{}                 //本地池
 	btcHPL      = &btcHistoryPool{}               //历史池,交易处理等待验证的
@@ -72,7 +71,6 @@ var (
 	//前后预留2批，共3批，不进块的情况下这个会上升，当恢复后需要释放
 	excuCH = make(chan *txexcuting, localPoolCount*2) //等到处理的通道，理论上也是单位时间段最多10个左右，最多同一周期并发出现20个，所以cap设置20就够了*/
 )
-
 
 type btcDaemon struct {
 	tick  *time.Ticker  //周期计时器
@@ -160,7 +158,6 @@ func (d *btcDaemon)Run(){
 				time.Sleep(3*time.Minute)
 				d.listenMainNet()
 			}(d)
-
 		}
 	}
 }
@@ -168,13 +165,12 @@ func (d *btcDaemon)Run(){
 
 
 
-
 //btc后端运行机制，单例跑
-func NewBTCDaemon()(daemon *btcDaemon){
+func NewBTCDaemon(tick *time.Ticker )(daemon *btcDaemon){
 	var err error
 	d := &btcDaemon{}
 	//1
-	d.tick = time.NewTicker(5*time.Second)
+	d.tick = tick// time.NewTicker(5*time.Second)
 	//2
 	d.blkHt,err = btcClient.GetBlockCount()
 	if err!=nil{
@@ -286,15 +282,21 @@ func (d *btcDaemon)consumeeExcuCH() {
 		//todo 执行tx并广播到共链，(需要分离SendAddressToAddress)
 		//todo 广播成功后推入历史池监听
 		btcSer := &BtcService{}
-		txid, err := btcSer.SendAddressToAddress(ch.addf, ch.addt, ch.transfer, ch.fee)
+		txid, err := btcSer.sendAddressToAddress(ch.addf, ch.addt, ch.transfer, ch.fee)
 		if err != nil {
 			//TODO 日志
+			log.Println(err)
+			 txr := &TxResult{
+				 Err:err,
+			 }
+			 ch.txrchan<-txr
+			 close(ch.txrchan)
 		} else {
 			//填充块高度
 			txe := &txexcuting{}
 			txe.fillBlockHeight()
 			txe.txHash, _ = chainhash.NewHashFromStr(txid)
-			//todo 扔给历史池
+			// 扔给历史池
 			d.hpl.m.Lock()
 			defer d.hpl.m.Unlock()
 			{
@@ -308,42 +310,40 @@ func (d *btcDaemon)consumeeExcuCH() {
 
 
 //（被动方法，触发器触发,需要间隔时间段触发）
-//todo 计时器每满一次，清空local池，首先去全局同步到本地
+// 清空local池，首先去全局同步到本地
 func (d *btcDaemon)restart() {
-			d.lpl.m.Lock()
-			defer d.lpl.m.Unlock()
-			{ //本地锁池
-				if d.lpl.size > 0 {
-					d.lpl.size = 0
+	d.lpl.m.Lock()
+	defer d.lpl.m.Unlock()
+	{ //本地锁池
+		if d.lpl.size > 0 {
+			d.lpl.size = 0
+		}
+		d.lpl.deadline.Add(btcTimeM)
+		d.gpl.m.Lock()
+		defer d.gpl.m.Unlock()
+		{ //全局锁池
+			if d.gpl.size > 0 {
+
+				size := 0
+				if d.gpl.size < localPoolCount {
+					size = d.gpl.size
+				} else {
+					size = localPoolCount
 				}
-				d.lpl.deadline.Add(btcTimeM)
+				d.lpl.size = size
 
-				d.gpl.m.Lock()
-				defer d.gpl.m.Unlock()
-				{ //全局锁池
-					if d.gpl.size > 0 {
-
-						size := 0
-						if d.gpl.size < localPoolCount {
-							size = d.gpl.size
-						} else {
-							size = localPoolCount
-						}
-						d.lpl.size = size
-
-						//处理chan+size
-						for _, v := range d.gpl.txcs {
-						d.exch	 <- &txexcuting{
-								txcache: v,
-							}
-						}
-						//全局缩减
-						d.gpl.size -= size
-						d.gpl.txcs = d.gpl.txcs[size:]
+				//处理chan+size
+				for _, v := range d.gpl.txcs {
+				d.exch	 <- &txexcuting{
+						txcache: v,
 					}
 				}
+				//全局缩减
+				d.gpl.size -= size
+				d.gpl.txcs = d.gpl.txcs[size:]
 			}
-
+		}
+	}
 }
 
 //(主动方法，交易发起的时候调用)
@@ -384,15 +384,14 @@ func (d *btcDaemon) push(addrFrom, addrTo string, transfer, fee coins.CoinAmount
 //OK （被动方法，触发器触发）
 //监听区块高度，需要放入到Init函数
 func (d *btcDaemon)monitoringBtcBlockHeight() {
-			height, err := btcClient.GetBlockCount()
-			if err != nil {
-				log.Println(err)
-			} else {
-				if height > d.blkHt  {
-					d.blkHt = height
-				}
-			}
-
+	height, err := btcClient.GetBlockCount()
+	if err != nil {
+		log.Println(err)
+	} else {
+		if height > d.blkHt  {
+			d.blkHt = height
+		}
+	}
 }
 
 //ok
@@ -400,7 +399,6 @@ func (d *btcDaemon)monitoringBtcBlockHeight() {
 //通过txHash获取tx详情，然后通过tx详情中的blockHash获取当前tx所在的block高度
 //将txHash 和 block高度，以及确认的block高度推入tb4check channel
 func (ex *txexcuting) fillBlockHeight() {
-
 	txinfo, err := btcClient.GetTransaction(ex.txHash)
 	if err != nil {
 		log.Printf("txId:%s 获取tx详情失败\r\n", ex.txHash.String())
@@ -420,12 +418,6 @@ func (ex *txexcuting) fillBlockHeight() {
 		ex.targetH = int64(blockInfo.Height + confirmNum)
 	}
 }
-
-//todo 执行交易SendAddressToAddress
-func (ex *txexcuting) excuteTx() {
-
-}
-
 
 
 func RmoveSliceByIndex(source []*txexcuting, indes []int) []*txexcuting {

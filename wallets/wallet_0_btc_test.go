@@ -3,7 +3,6 @@ package wallets
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"testing"
 )
 
@@ -45,18 +44,3 @@ func TestGetBlockInfo(t *testing.T) {
 	getBlockInfo("53dc56749eac5f46820fcdee93e0c1e4242b07a129b4635cc6e4e57c4d69ba76")
 }
 
-///////////////////////////////////pool-test////////////////////////////////////////////////
-func TestFillBlockHeight(t *testing.T) {
-	hash, _ := chainhash.NewHashFromStr("88af33f7e455751ae130746f7a7bd6538fc8b791aa67692dba33ab450ada9c92")
-	txc := &txexcuting{
-		txHash: hash,
-		txcache: &txcache{
-			txrchan: make(chan *TxResult),
-		},
-	}
-	txc.fillBlockHeight()
-	t.Log(txc.targetH, txc.blockH)
-}
-func TestMonitoringBtcBlockHeight(t *testing.T) {
-//	monitoringBtcBlockHeight()
-}

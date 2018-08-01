@@ -20,6 +20,7 @@ import (
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
+	"sync"
 )
 
 type BtcService struct {
@@ -130,6 +131,19 @@ func (*BtcService) GetBalanceInAddress(address string) (balance coins.CoinAmount
 //transfer 转账金额
 //fee 小费
 func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter) (txId string, err error) {
+	//参数拦截,进入btcDaemon处理，会后台自动调用sendAddressToAddress方法
+	ch := make(chan<- *TxResult)
+	wg := new(sync.WaitGroup)
+	wg.Add(1)
+	go func(){
+		btcD.push(addrFrom,addrTo,transfer,fee,ch)
+	}()
+
+	wg.Wait()
+	return
+}
+//真正的转账
+func (b *BtcService)sendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter) (txId string, err error) {
 	//数据库获取prv pub key等信息，便于调试--------START------
 	actf, err := dhSrv.GetAccountByAddress(addrFrom)
 	if err != nil {
