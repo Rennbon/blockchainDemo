@@ -73,6 +73,7 @@ var (
 	excuCH = make(chan *txexcuting, localPoolCount*2) //等到处理的通道，理论上也是单位时间段最多10个左右，最多同一周期并发出现20个，所以cap设置20就够了*/
 )
 
+
 type btcDaemon struct {
 	tick  *time.Ticker  //周期计时器
 	blkHt int64 //btc块高
@@ -128,32 +129,43 @@ type txcache struct {
 	txrchan  chan<- *TxResult   //chan维持
 }
 
+func (d *btcDaemon)Run(){
+	if d==nil{
+		panic("老兄，不存在的，你需要调用NewBTCDaemon创建一个对象")
+	}
+	//消费，永动机，全局d即可
+	go func(){
+		d.consumeeExcuCH()
+	}()
+	for {
+		select {
+		case <-d.tick.C:
+			//刷区块高度
+			go func(d *btcDaemon){
+				d.monitoringBtcBlockHeight()
+			}(d)
+			//重置单位时间本地限流
+			go func(d *btcDaemon){
+				time.Sleep(1*time.Minute)
+				d.restart()
+			}(d)
+			//从历史池抓取即将处理的数据到待验证队列等到消费，扔到cq队列
+			go func(d *btcDaemon){
+				time.Sleep(2*time.Minute)
+				d.fillConfmQ()
+			}(d)
 
-//ok
-//处理tx交易信息
-//通过txHash获取tx详情，然后通过tx详情中的blockHash获取当前tx所在的block高度
-//将txHash 和 block高度，以及确认的block高度推入tb4check channel
-func (ex *txexcuting) fillBlockHeight() {
+			// 轮询cq队列，监听公链状态同步
+			go func(d *btcDaemon){
+				time.Sleep(3*time.Minute)
+				d.listenMainNet()
+			}(d)
 
-	txinfo, err := btcClient.GetTransaction(ex.txHash)
-	if err != nil {
-		log.Printf("txId:%s 获取tx详情失败\r\n", ex.txHash.String())
-		return
-	} else {
-		blockHash, err := chainhash.NewHashFromStr(txinfo.BlockHash)
-		if err != nil {
-			log.Printf("blockHash:%s string to hash失败\r\n", txinfo.BlockHash)
-			return
 		}
-		blockInfo, err := btcClient.GetBlockHeaderVerbose(blockHash)
-		if err != nil {
-			log.Printf("txId:%s 获取block详情失败\r\n", txinfo.BlockHash)
-			return
-		}
-		ex.blockH = int64(blockInfo.Height)
-		ex.targetH = int64(blockInfo.Height + confirmNum)
 	}
 }
+
+
 
 
 
@@ -196,41 +208,10 @@ func NewBTCDaemon()(daemon *btcDaemon){
 	}
 	return  d
 }
-func (d *btcDaemon) polling(){
-	for {
-		select {
-			case <-d.tick.C:
 
 
-		}
-	}
-}
-
-//todo 消费处理池，执行TX,需要轮询
-func (d *btcDaemon)consumeeExcuCH() {
-	for ch := range d.exch  {
-		//todo 执行tx并广播到共链，(需要分离SendAddressToAddress)
-		//todo 广播成功后推入历史池监听
-		btcSer := &BtcService{}
-		txid, err := btcSer.SendAddressToAddress(ch.addf, ch.addt, ch.transfer, ch.fee)
-		if err != nil {
-			//TODO 日志
-		} else {
-			//填充块高度
-			txe := &txexcuting{}
-			txe.fillBlockHeight()
-			txe.txHash, _ = chainhash.NewHashFromStr(txid)
-			//todo 扔给历史池
-			d.hpl.m.Lock()
-			defer d.hpl.m.Unlock()
-			{
-				d.hpl.size++
-				d.hpl.txcsing = append(d.hpl.txcsing, txe)
-			}
-		}
-	}
-}
-
+//（被动方法，触发器触发,需要间隔时间段触发）
+//
 //填充需要当前时间检测的tx的公链状态
 func (d *btcDaemon)fillConfmQ() {
 	d.hpl.m.Lock()
@@ -255,7 +236,7 @@ func (d *btcDaemon)fillConfmQ() {
 		}
 	}
 }
-
+//（被动方法，触发器触发,需要间隔时间段触发）
 //监听公链
 //todo 	轮询tx,检测到ok的需要close 内部chan状态
 func (d *btcDaemon)listenMainNet() {
@@ -297,7 +278,36 @@ func (d *btcDaemon)listenMainNet() {
 		}
 	}
 }
+//（被动方法,一次触发，跑到死）
+//启动一次，跑个没完
+//todo 消费处理池，执行TX,需要轮询
+func (d *btcDaemon)consumeeExcuCH() {
+	for ch := range d.exch  {
+		//todo 执行tx并广播到共链，(需要分离SendAddressToAddress)
+		//todo 广播成功后推入历史池监听
+		btcSer := &BtcService{}
+		txid, err := btcSer.SendAddressToAddress(ch.addf, ch.addt, ch.transfer, ch.fee)
+		if err != nil {
+			//TODO 日志
+		} else {
+			//填充块高度
+			txe := &txexcuting{}
+			txe.fillBlockHeight()
+			txe.txHash, _ = chainhash.NewHashFromStr(txid)
+			//todo 扔给历史池
+			d.hpl.m.Lock()
+			defer d.hpl.m.Unlock()
+			{
+				d.hpl.size++
+				d.hpl.txcsing = append(d.hpl.txcsing, txe)
+			}
+		}
+	}
+}
 
+
+
+//（被动方法，触发器触发,需要间隔时间段触发）
 //todo 计时器每满一次，清空local池，首先去全局同步到本地
 func (d *btcDaemon)restart() {
 			d.lpl.m.Lock()
@@ -336,6 +346,7 @@ func (d *btcDaemon)restart() {
 
 }
 
+//(主动方法，交易发起的时候调用)
 //往local池写数据
 //若local池已满，则写到global池
 //local池的直接写到history池执行tx交易并监听
@@ -370,7 +381,7 @@ func (d *btcDaemon) push(addrFrom, addrTo string, transfer, fee coins.CoinAmount
 	}
 }
 
-//OK
+//OK （被动方法，触发器触发）
 //监听区块高度，需要放入到Init函数
 func (d *btcDaemon)monitoringBtcBlockHeight() {
 			height, err := btcClient.GetBlockCount()
@@ -382,6 +393,32 @@ func (d *btcDaemon)monitoringBtcBlockHeight() {
 				}
 			}
 
+}
+
+//ok
+//处理tx交易信息
+//通过txHash获取tx详情，然后通过tx详情中的blockHash获取当前tx所在的block高度
+//将txHash 和 block高度，以及确认的block高度推入tb4check channel
+func (ex *txexcuting) fillBlockHeight() {
+
+	txinfo, err := btcClient.GetTransaction(ex.txHash)
+	if err != nil {
+		log.Printf("txId:%s 获取tx详情失败\r\n", ex.txHash.String())
+		return
+	} else {
+		blockHash, err := chainhash.NewHashFromStr(txinfo.BlockHash)
+		if err != nil {
+			log.Printf("blockHash:%s string to hash失败\r\n", txinfo.BlockHash)
+			return
+		}
+		blockInfo, err := btcClient.GetBlockHeaderVerbose(blockHash)
+		if err != nil {
+			log.Printf("txId:%s 获取block详情失败\r\n", txinfo.BlockHash)
+			return
+		}
+		ex.blockH = int64(blockInfo.Height)
+		ex.targetH = int64(blockInfo.Height + confirmNum)
+	}
 }
 
 //todo 执行交易SendAddressToAddress

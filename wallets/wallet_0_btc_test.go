@@ -58,5 +58,5 @@ func TestFillBlockHeight(t *testing.T) {
 	t.Log(txc.targetH, txc.blockH)
 }
 func TestMonitoringBtcBlockHeight(t *testing.T) {
-	monitoringBtcBlockHeight()
+//	monitoringBtcBlockHeight()
 }
