@@ -69,7 +69,7 @@ func TestGetNewAddress(t *testing.T) {
 
 //测试获取账户余额
 func TestGetBalanceInAddress(t *testing.T) {
-	handler.LoadService(xlm)
+	handler.LoadService(btc)
 	var (
 		balance coins.CoinAmounter
 		err     error
@@ -95,7 +95,7 @@ func TestSendAddressToAddress(t *testing.T) {
 		txId          string
 		err           error
 		transfer, fee coins.CoinAmounter
-		ch            <-chan *wallets.TxResult
+		ch  <-          chan *wallets.TxResult
 	)
 	ch = make(chan *wallets.TxResult)
 	switch handler.TypeName {

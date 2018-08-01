@@ -4,9 +4,9 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"testing"
 	"time"
+	"log"
 )
 
-var _t_btcDaemon  = NewBTCDaemon(time.NewTicker(5*time.Second))
 
 ///////////////////////////////////pool-test////////////////////////////////////////////////
 func TestFillBlockHeight(t *testing.T) {
@@ -20,6 +20,27 @@ func TestFillBlockHeight(t *testing.T) {
 	_txc.fillBlockHeight()
 	t.Log(_txc.targetH, _txc.blockH)
 }
+
+func TestNewBTCDaemon(t *testing.T) {
+	daemon := NewBTCDaemon(time.NewTicker(5*time.Second))
+	t.Log( daemon.blkHt)
+}
 func TestMonitoringBtcBlockHeight(t *testing.T) {
-	//	monitoringBtcBlockHeight()
+	daemon := NewBTCDaemon(time.NewTicker(1*time.Second))
+	height :=daemon.blkHt
+	t.Log("目前高度:",height)
+	log.Println("目前高度:",height)
+	for i:=0;i<100;i++ {
+		select {
+			case <-daemon.tick.C:
+				log.Println("第",i,"次")
+				daemon.monitoringBtcBlockHeight()
+				log.Println("current block height",daemon.blkHt)
+				log.Println("old block height",height)
+			    if daemon.blkHt>height+2{
+			    	log.Println("I am coming!!!")
+			    	return
+				}
+		}
+	}
 }

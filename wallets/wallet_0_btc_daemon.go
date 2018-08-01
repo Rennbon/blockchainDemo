@@ -56,7 +56,7 @@ var (
 	confirmNum     = int32(6)
 	localPoolCount = int(10) //本地容器上限
 	btcTimeM, _ = time.ParseDuration("10m")       //同上延迟localpool deadline用
-	btcD = NewBTCDaemon(time.NewTicker(10*time.Minute))
+	//btcD = NewBTCDaemon(time.NewTicker(10*time.Minute))
 /*	btcGPL      = &btcGlobalPool{}                //全局池
 	btcLPL      = &btcLocalPool{}                 //本地池
 	btcHPL      = &btcHistoryPool{}               //历史池,交易处理等待验证的
