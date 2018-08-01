@@ -139,9 +139,8 @@ func (d *btcDaemon)Run(){
 		select {
 		case <-d.tick.C:
 			//刷区块高度
-			go func(d *btcDaemon){
-				d.monitoringBtcBlockHeight()
-			}(d)
+			go d.monitoringBtcBlockHeight()
+
 			//重置单位时间本地限流
 			go func(d *btcDaemon){
 				time.Sleep(1*time.Minute)
@@ -215,11 +214,12 @@ func (d *btcDaemon)fillConfmQ() {
 	defer d.hpl.m.Unlock()
 	{ //锁池
 		qrm := []int{}
-		for k, v := range d.hpl.txcsing {
-			if v.targetH <= d.blkHt && !v.status {
-				d.cq.m.Lock()
-				defer d.cq.m.Unlock()
-				{
+		d.cq.m.Lock()
+		defer d.cq.m.Unlock()
+		{
+			for k, v := range d.hpl.txcsing {
+				if v.targetH <= d.blkHt {
+
 					txhasharr = append(txhasharr, v.txHash)
 					d.cq.q = append(d.cq.q, v)
 					qrm = append(qrm, k)
@@ -298,11 +298,11 @@ func (d *btcDaemon)consumeeExcuCH() {
 			txe.txHash, _ = chainhash.NewHashFromStr(txid)
 			// 扔给历史池
 			d.hpl.m.Lock()
-			defer d.hpl.m.Unlock()
 			{
 				d.hpl.size++
 				d.hpl.txcsing = append(d.hpl.txcsing, txe)
 			}
+			d.hpl.m.Unlock()
 		}
 	}
 }

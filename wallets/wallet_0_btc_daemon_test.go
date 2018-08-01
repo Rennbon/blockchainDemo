@@ -6,6 +6,8 @@ import (
 	"time"
 	"log"
 	"sync"
+	"math/rand"
+	"bytes"
 )
 
 
@@ -89,4 +91,45 @@ func TestBtcDaemon_push(t *testing.T) {
 		}
 	}(daemon)
 	wg.Wait()
+}
+//假设当前全局区块高度block height
+//往历史池里面添加测试数据多组,target block height（tbh）, 测试数据中的tbh的分布在block height2端都需要有
+//
+//全局块高度高度++
+//
+//循环执行测试函数
+func TestFillConfmQ(t *testing.T) {
+	rand.Seed(time.Now().UnixNano())
+	daemon := NewBTCDaemon(time.NewTicker(1 * time.Second))
+	daemon.blkHt =100 //全局高度
+	//所有假设target block height [80,120]
+	for i := 0; i < 100; i++ {
+		tbh := 80 + rand.Int63n(41)
+		t := &txexcuting{
+			targetH: tbh,
+			blockH: int64(i), //借字段一用，字段含义非当前测试的含义
+		}
+		daemon.hpl.txcsing = append(daemon.hpl.txcsing,t)
+		daemon.hpl.size ++
+		log.Println("第",i,"个 ",tbh)
+	}
+	size :=0
+	for i:=0;i<50;i++ {
+		select{
+		 case <-daemon.tick.C:
+		 	daemon.fillConfmQ()
+		    size = len(daemon.cq.q)
+		    log.Println("第",i,"组")
+		    log.Println("size:",size)
+		    buff := &bytes.Buffer{}
+			for _,v :=range daemon.cq.q{
+				buff.WriteString("第")
+				buff.WriteString(string(v.blockH))
+				buff.WriteString("个,")
+				buff.WriteString("块高:")
+				buff.WriteString(string(v.targetH))
+			}
+			log.Println(buff.String())
+		}
+	}
 }
