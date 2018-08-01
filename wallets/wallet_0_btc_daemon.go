@@ -1,4 +1,31 @@
 /*
+发起交易的生命周期（大致流程图）：
+					  ┏—————————————---—┓
+					  |  传参调用交易方法 |
+					  ┗-----------------┛
+								↓
+					  ┏—————————————---—┓
+					  |      参数拦截	    |
+					  ┗-----------------┛
+								↓
+						   ----------
+						﹤   参数拦截	   >
+						   ----------
+				默认	↓  					  ↓  本地池已满
+		  ┏—————————————---—┓    ┏—————————————---—┓
+		  |    本地池计数     | <=|   缓存到全局池	   |    (如本地池上限是10个，本地池每隔一个周期清一次计数，清完后优先从全局池获取前10个进入本地计数)
+		  ┗-----------------┛  	 ┗-----------------┛
+					↓
+		  ┏—————————————---—┓     ┏—————————————---—┓    ┏—————————————---—┓
+		  |  推入tx处理队列   |  -> |   执行TX操作     | -> | 填充预期处理块高  |
+		  ┗-----------------┛	  ┗-----------------┛	 ┗-----------------┛
+																  ↓
+		  ┏—————————————---—┓     ┏—————————————---—┓    ┏—————————————---—┓
+		  |    处理完毕记录   |  -> | 监听块高拉取处理  | <- |    放入历史池    |
+		  ┗-----------------┛	  ┗-----------------┛	 ┗-----------------┛
+生命周期
+
+
 维护本地队列，以及全局，历史队列
  * 所有请求参数都需缓存下来，带上时间，方便追踪，和挂死的重启
  - 本地队列限制单位时间只能允许定量的tx提交到公链
@@ -25,15 +52,17 @@ import (
 
 var (
 
-	blockHeight    int64
+	//blockHeight    int64
 	confirmNum     = int32(6)
 	localPoolCount = int(10) //本地容器上限
+	btcTimeM, _ = time.ParseDuration("10m")       //同上延迟localpool deadline用
+	btcD = NewBTCDaemon()
 
-	btcGPL      = &btcGlobalPool{}                //全局池
+/*	btcGPL      = &btcGlobalPool{}                //全局池
 	btcLPL      = &btcLocalPool{}                 //本地池
 	btcHPL      = &btcHistoryPool{}               //历史池,交易处理等待验证的
 	tick        = time.NewTicker(5 * time.Second) //扫描计区块等周期计时器
-	btcTimeM, _ = time.ParseDuration("10m")       //同上延迟localpool deadline用
+
 	historyWG   = new(sync.WaitGroup)             //监听历史池
 
 	cq = &confmQ{
@@ -41,19 +70,17 @@ var (
 		m: new(sync.Mutex),
 	}
 	//前后预留2批，共3批，不进块的情况下这个会上升，当恢复后需要释放
-	excuCH = make(chan *txexcuting, localPoolCount*2) //等到处理的通道，理论上也是单位时间段最多10个左右，最多同一周期并发出现20个，所以cap设置20就够了
-
-
+	excuCH = make(chan *txexcuting, localPoolCount*2) //等到处理的通道，理论上也是单位时间段最多10个左右，最多同一周期并发出现20个，所以cap设置20就够了*/
 )
 
 type btcDaemon struct {
 	tick  *time.Ticker  //周期计时器
 	blkHt int64 //btc块高
-	gpl *btcGlobalPool
-	lpl *btcLocalPool
-	hpl *btcHistoryPool
-	cq *confmQ
-	exch chan *txexcuting
+	gpl *btcGlobalPool  //全局池
+	lpl *btcLocalPool //本地池
+	hpl *btcHistoryPool //历史池（等待确认tx状态的）
+	cq *confmQ  //当前可以确认tx状态的，指block height now > 6块 + created block height
+	exch chan *txexcuting //需要处理提交到共链的tx，该chan下数据需要提交离线签名=>处理块高=>投入历史池
 
 }
 
@@ -100,240 +127,7 @@ type txcache struct {
 	fee      coins.CoinAmounter //交易小费
 	txrchan  chan<- *TxResult   //chan维持
 }
-func NewBTCDaemon()(daemon *btcDaemon,err error){
-	d := &btcDaemon{}
-	d.tick = time.NewTicker(5*time.Second)
-	d.blkHt,err = btcClient.GetBlockCount()
-	if err!=nil{
-		panic(err)
-	}
-	d.cq = &confmQ{
-		q: make([]*txexcuting, 0, localPoolCount*3),
-		m: new(sync.Mutex),
-	}
-	d.exch = make(chan *txexcuting, localPoolCount*2)
-	d.gpl = &btcGlobalPool{
-		m: new(sync.Mutex),
-		size:0,
-		txcs:[]*txcache{},
-	}
-	tm, _ = time.ParseDuration("10m")
-	d.lpl = &btcLocalPool{
-		m: new(sync.Mutex),
-		size:0,
-		deadline:time.Now().Add(tm),//当前时间+10分钟
-	}
-	d.hpl = &btcHistoryPool{
-		m: new(sync.Mutex),
-		size:0,
-		txcsing:[]*txexcuting{},
-	}
 
-
-}
-
-
-//todo 消费处理池，执行TX
-func (d *btcDaemon)consumeeExcuCH() {
-	tick4Excu := time.NewTicker(5 * time.Second)
-	for {
-		select {
-		case <-tick4Excu.C:
-			for ch := range excuCH {
-				//todo 执行tx并广播到共链，(需要分离SendAddressToAddress)
-				//todo 广播成功后推入历史池监听
-				btcSer := &BtcService{}
-				txid, err := btcSer.SendAddressToAddress(ch.addf, ch.addt, ch.transfer, ch.fee)
-				if err != nil {
-					//TODO 日志
-				} else {
-					//填充块高度
-					txe := &txexcuting{}
-					txe.fillBlockHeight()
-					txe.txHash, _ = chainhash.NewHashFromStr(txid)
-					//todo 扔给历史池
-					btcHPL.m.Lock()
-					defer btcHPL.m.Unlock()
-					{
-						btcHPL.size++
-						btcHPL.txcsing = append(btcHPL.txcsing, txe)
-					}
-				}
-			}
-		}
-	}
-}
-
-//填充需要当前时间检测的tx的公链状态
-func (d *btcDaemon)fillConfmQ() {
-	for {
-		select {
-		case <-tick.C:
-			btcHPL.m.Lock()
-			txhasharr := []*chainhash.Hash{}
-			defer btcHPL.m.Unlock()
-			{ //锁池
-				qrm := []int{}
-				for k, v := range btcHPL.txcsing {
-					if v.targetH <= blockHeight && !v.status {
-						cq.m.Lock()
-						defer cq.m.Unlock()
-						{
-							txhasharr = append(txhasharr, v.txHash)
-							cq.q = append(cq.q, v)
-							qrm = append(qrm, k)
-						}
-					}
-				}
-				//移除老数据
-				if len(qrm) > 0 {
-					btcHPL.txcsing = RmoveSliceByIndex(btcHPL.txcsing, qrm)
-				}
-			}
-		}
-	}
-}
-
-//监听公链
-//todo 	轮询tx,检测到ok的需要close 内部chan状态
-func (d *btcDaemon)listenMainNet() {
-	cq.m.Lock()
-	defer cq.m.Unlock()
-	{
-		qneed := []int{}
-		for k, cur := range cq.q {
-			txInfo, err := btcClient.GetRawTransactionVerbose(cur.txHash)
-			if err != nil {
-				log.Println(err)
-				continue
-			}
-			if txInfo.Confirmations >= uint64(confirmNum) {
-				tr := &TxResult{
-					TxId:   cur.txHash.String(),
-					Status: true,
-					Err:    nil,
-				}
-				for _, v := range txInfo.Vout {
-					amout, _ := btcCoin.FloatToCoinAmout(v.Value)
-					tai := &TxAddressInfo{
-						Address: v.ScriptPubKey.Addresses,
-						Amount:  amout,
-					}
-					tr.AddInfos = append(tr.AddInfos, tai)
-				}
-				cq.q[k].txrchan <- tr
-				close(cq.q[k].txrchan)
-			} else {
-				qneed = append(qneed)
-			}
-		}
-		//这里可以封装成方法
-		if len(qneed) == 0 {
-			cq.q = make([]*txexcuting, 0, localPoolCount*3)
-		} else {
-			cq.q = GetSliceByIndex(cq.q, qneed)
-		}
-	}
-}
-
-//todo 计时器每满一次，清空local池，首先去全局同步到本地
-func (d *btcDaemon)restart() {
-	for {
-		select {
-		case <-tick.C:
-			btcLPL.m.Lock()
-			defer btcLPL.m.Unlock()
-			{ //本地锁池
-				if btcLPL.size > 0 {
-					btcLPL.size = 0
-				}
-				btcLPL.deadline.Add(btcTimeM)
-
-				btcGPL.m.Lock()
-				defer btcGPL.m.Unlock()
-				{ //全局锁池
-					if btcGPL.size > 0 {
-
-						size := 0
-						if btcGPL.size < localPoolCount {
-							size = btcGPL.size
-						} else {
-							size = localPoolCount
-						}
-						btcLPL.size = size
-
-						//处理chan+size
-						for _, v := range btcGPL.txcs {
-							excuCH <- &txexcuting{
-								txcache: v,
-							}
-						}
-						//全局缩减
-						btcGPL.size -= size
-						btcGPL.txcs = btcGPL.txcs[size:]
-					}
-				}
-			}
-		}
-	}
-}
-
-//往local池写数据
-//若local池已满，则写到global池
-//local池的直接写到history池执行tx交易并监听
-func (d *btcDaemon) push(addrFrom, addrTo string, transfer, fee coins.CoinAmounter, txrchan chan<- *TxResult) {
-	btcLPL.m.Lock()
-	defer btcLPL.m.Unlock()
-	{ //本地锁池
-		tc := &txcache{
-			birthday: time.Now(),
-			addf:     addrFrom,
-			addt:     addrTo,
-			transfer: transfer,
-			fee:      fee,
-			txrchan:  txrchan,
-		}
-		if btcLPL.size >= localPoolCount {
-			btcGPL.m.Lock()
-			defer btcGPL.m.Unlock()
-			{ //全局锁池
-				btcGPL.size += 1
-				btcGPL.txcs = append(btcGPL.txcs, tc)
-			}
-		} else {
-			//本地+1
-			btcLPL.size += 1
-			tcing := &txexcuting{
-				txcache: tc,
-			}
-			//处理chan+1
-			excuCH <- tcing
-		}
-	}
-}
-
-//OK
-//监听区块高度，需要放入到Init函数
-func (d *btcDaemon)monitoringBtcBlockHeight() {
-	for {
-		select {
-		case <-tick.C:
-			height, err := btcClient.GetBlockCount()
-			if err != nil {
-				log.Println(err)
-			} else {
-				if height > blockHeight {
-					blockHeight = height
-				}
-			}
-		}
-	}
-}
-
-//todo 执行交易SendAddressToAddress
-func (ex *txexcuting) excuteTx() {
-
-}
 
 //ok
 //处理tx交易信息
@@ -360,6 +154,242 @@ func (ex *txexcuting) fillBlockHeight() {
 		ex.targetH = int64(blockInfo.Height + confirmNum)
 	}
 }
+
+
+
+//btc后端运行机制，单例跑
+func NewBTCDaemon()(daemon *btcDaemon){
+	var err error
+	d := &btcDaemon{}
+	//1
+	d.tick = time.NewTicker(5*time.Second)
+	//2
+	d.blkHt,err = btcClient.GetBlockCount()
+	if err!=nil{
+		panic(err)
+	}
+	//3
+	d.cq = &confmQ{
+		q: make([]*txexcuting, 0, localPoolCount*3),
+		m: new(sync.Mutex),
+	}
+	//4 处理的通道，理论上也是单位时间段最多10个左右，最多同一周期并发出现20个，所以cap设置20就够了
+	d.exch = make(chan *txexcuting, localPoolCount*2)
+	//5
+	d.gpl = &btcGlobalPool{
+		m: new(sync.Mutex),
+		size:0,
+		txcs:[]*txcache{},
+	}
+	tm, _ := time.ParseDuration("10m")
+	//6
+	d.lpl = &btcLocalPool{
+		m: new(sync.Mutex),
+		size:0,
+		deadline:time.Now().Add(tm),//当前时间+10分钟
+	}
+	//7
+	d.hpl = &btcHistoryPool{
+		m: new(sync.Mutex),
+		size:0,
+		txcsing:[]*txexcuting{},
+	}
+	return  d
+}
+func (d *btcDaemon) polling(){
+	for {
+		select {
+			case <-d.tick.C:
+
+
+		}
+	}
+}
+
+//todo 消费处理池，执行TX,需要轮询
+func (d *btcDaemon)consumeeExcuCH() {
+	for ch := range d.exch  {
+		//todo 执行tx并广播到共链，(需要分离SendAddressToAddress)
+		//todo 广播成功后推入历史池监听
+		btcSer := &BtcService{}
+		txid, err := btcSer.SendAddressToAddress(ch.addf, ch.addt, ch.transfer, ch.fee)
+		if err != nil {
+			//TODO 日志
+		} else {
+			//填充块高度
+			txe := &txexcuting{}
+			txe.fillBlockHeight()
+			txe.txHash, _ = chainhash.NewHashFromStr(txid)
+			//todo 扔给历史池
+			d.hpl.m.Lock()
+			defer d.hpl.m.Unlock()
+			{
+				d.hpl.size++
+				d.hpl.txcsing = append(d.hpl.txcsing, txe)
+			}
+		}
+	}
+}
+
+//填充需要当前时间检测的tx的公链状态
+func (d *btcDaemon)fillConfmQ() {
+	d.hpl.m.Lock()
+	txhasharr := []*chainhash.Hash{}
+	defer d.hpl.m.Unlock()
+	{ //锁池
+		qrm := []int{}
+		for k, v := range d.hpl.txcsing {
+			if v.targetH <= d.blkHt && !v.status {
+				d.cq.m.Lock()
+				defer d.cq.m.Unlock()
+				{
+					txhasharr = append(txhasharr, v.txHash)
+					d.cq.q = append(d.cq.q, v)
+					qrm = append(qrm, k)
+				}
+			}
+		}
+		//移除老数据
+		if len(qrm) > 0 {
+			d.hpl.txcsing = RmoveSliceByIndex(d.hpl.txcsing, qrm)
+		}
+	}
+}
+
+//监听公链
+//todo 	轮询tx,检测到ok的需要close 内部chan状态
+func (d *btcDaemon)listenMainNet() {
+	d.cq.m.Lock()
+	defer d.cq.m.Unlock()
+	{
+		qneed := []int{}
+		for k, cur := range d.cq.q {
+			txInfo, err := btcClient.GetRawTransactionVerbose(cur.txHash)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			if txInfo.Confirmations >= uint64(confirmNum) {
+				tr := &TxResult{
+					TxId:   cur.txHash.String(),
+					Status: true,
+					Err:    nil,
+				}
+				for _, v := range txInfo.Vout {
+					amout, _ := btcCoin.FloatToCoinAmout(v.Value)
+					tai := &TxAddressInfo{
+						Address: v.ScriptPubKey.Addresses,
+						Amount:  amout,
+					}
+					tr.AddInfos = append(tr.AddInfos, tai)
+				}
+				d.cq.q[k].txrchan <- tr
+				close(d.cq.q[k].txrchan)
+			} else {
+				qneed = append(qneed)
+			}
+		}
+		//这里可以封装成方法
+		if len(qneed) == 0 {
+			d.cq.q = make([]*txexcuting, 0, localPoolCount*3)
+		} else {
+			d.cq.q = GetSliceByIndex(d.cq.q, qneed)
+		}
+	}
+}
+
+//todo 计时器每满一次，清空local池，首先去全局同步到本地
+func (d *btcDaemon)restart() {
+			d.lpl.m.Lock()
+			defer d.lpl.m.Unlock()
+			{ //本地锁池
+				if d.lpl.size > 0 {
+					d.lpl.size = 0
+				}
+				d.lpl.deadline.Add(btcTimeM)
+
+				d.gpl.m.Lock()
+				defer d.gpl.m.Unlock()
+				{ //全局锁池
+					if d.gpl.size > 0 {
+
+						size := 0
+						if d.gpl.size < localPoolCount {
+							size = d.gpl.size
+						} else {
+							size = localPoolCount
+						}
+						d.lpl.size = size
+
+						//处理chan+size
+						for _, v := range d.gpl.txcs {
+						d.exch	 <- &txexcuting{
+								txcache: v,
+							}
+						}
+						//全局缩减
+						d.gpl.size -= size
+						d.gpl.txcs = d.gpl.txcs[size:]
+					}
+				}
+			}
+
+}
+
+//往local池写数据
+//若local池已满，则写到global池
+//local池的直接写到history池执行tx交易并监听
+func (d *btcDaemon) push(addrFrom, addrTo string, transfer, fee coins.CoinAmounter, txrchan chan<- *TxResult) {
+	d.lpl.m.Lock()
+	defer d.lpl.m.Unlock()
+	{ //本地锁池
+		tc := &txcache{
+			birthday: time.Now(),
+			addf:     addrFrom,
+			addt:     addrTo,
+			transfer: transfer,
+			fee:      fee,
+			txrchan:  txrchan,
+		}
+		if d.lpl.size >= localPoolCount {
+			d.gpl.m.Lock()
+			defer d.gpl.m.Unlock()
+			{ //全局锁池
+				d.gpl.size += 1
+				d.gpl.txcs = append(d.gpl.txcs, tc)
+			}
+		} else {
+			//本地+1
+			d.lpl.size += 1
+			tcing := &txexcuting{
+				txcache: tc,
+			}
+			//处理chan+1
+			d.exch <- tcing
+		}
+	}
+}
+
+//OK
+//监听区块高度，需要放入到Init函数
+func (d *btcDaemon)monitoringBtcBlockHeight() {
+			height, err := btcClient.GetBlockCount()
+			if err != nil {
+				log.Println(err)
+			} else {
+				if height > d.blkHt  {
+					d.blkHt = height
+				}
+			}
+
+}
+
+//todo 执行交易SendAddressToAddress
+func (ex *txexcuting) excuteTx() {
+
+}
+
+
 
 func RmoveSliceByIndex(source []*txexcuting, indes []int) []*txexcuting {
 	qnew := make([]*txexcuting, 0, len(source)-len(indes))
