@@ -210,9 +210,9 @@ func NewBTCDaemon(tick *time.Ticker )(daemon *btcDaemon){
 //填充需要当前时间检测的tx的公链状态
 func (d *btcDaemon)fillConfmQ() {
 	d.hpl.m.Lock()
-	txhasharr := []*chainhash.Hash{}
 	defer d.hpl.m.Unlock()
 	{ //锁池
+		txhasharr := []*chainhash.Hash{}
 		qrm := []int{}
 		d.cq.m.Lock()
 		defer d.cq.m.Unlock()
@@ -229,6 +229,7 @@ func (d *btcDaemon)fillConfmQ() {
 		//移除老数据
 		if len(qrm) > 0 {
 			d.hpl.txcsing = RmoveSliceByIndex(d.hpl.txcsing, qrm)
+			d.hpl.size = d.hpl.size-len(qrm)
 		}
 	}
 }
@@ -421,16 +422,22 @@ func (ex *txexcuting) fillBlockHeight() {
 
 
 func RmoveSliceByIndex(source []*txexcuting, indes []int) []*txexcuting {
-	qnew := make([]*txexcuting, 0, len(source)-len(indes))
-	if len(indes) > 0 {
+	lenI := len(indes)
+	lenS := len(source)
+	qnew := make([]*txexcuting, 0, lenS-lenI)
+	if lenI > 0 {
 		mdl := 0
 		for _, v := range indes {
 			if v == 0 {
 				mdl = 0
-			} else {
+			} else if mdl != v {
+
 				qnew = append(qnew, source[mdl:v]...)
-				mdl = v + 1
 			}
+			mdl = v + 1
+		}
+		if mdl < lenS {
+			qnew = append(qnew, source[mdl:]...)
 		}
 	}
 	return qnew

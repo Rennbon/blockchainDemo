@@ -8,6 +8,7 @@ import (
 	"sync"
 	"math/rand"
 	"bytes"
+	"strconv"
 )
 
 
@@ -114,22 +115,56 @@ func TestFillConfmQ(t *testing.T) {
 		log.Println("第",i,"个 ",tbh)
 	}
 	size :=0
-	for i:=0;i<50;i++ {
+	//flag :=true
+	for i:=0;i<20;i++ {
 		select{
 		 case <-daemon.tick.C:
+		 	//if i%2==1{
+		 		daemon.blkHt++
+			//}
 		 	daemon.fillConfmQ()
 		    size = len(daemon.cq.q)
+
 		    log.Println("第",i,"组")
 		    log.Println("size:",size)
-		    buff := &bytes.Buffer{}
-			for _,v :=range daemon.cq.q{
+			log.Println("当前块高:",daemon.blkHt)
+			 buff := &bytes.Buffer{}
+			for k,v :=range daemon.cq.q{
+				if v.targetH>daemon.blkHt{
+					t.Fail()
+					t.Error("历史池中扒出的数据含有大于于当前块高的数据")
+				}
+				buff.WriteString("序号:")
+				buff.WriteString(strconv.FormatInt(int64(k),10))
 				buff.WriteString("第")
-				buff.WriteString(string(v.blockH))
+				buff.WriteString(strconv.FormatInt(v.blockH,10))
 				buff.WriteString("个,")
 				buff.WriteString("块高:")
-				buff.WriteString(string(v.targetH))
+				buff.WriteString(strconv.FormatInt(v.targetH,10))
+				buff.WriteString("\n")
+			}
+			if len(daemon.hpl.txcsing) != daemon.hpl.size{
+				t.Fail()
+				t.Error("历史池冗余计数和实际slice长度不匹配")
 			}
 			log.Println(buff.String())
+			log.Println("历史池剩余size",daemon.hpl.size)
+			buff2 := &bytes.Buffer{}
+			for k,v :=range daemon.hpl.txcsing{
+				if v.targetH<=daemon.blkHt{
+					t.Fail()
+					t.Error("历史池被扒后还有小于当前块高的数据")
+				}
+				buff2.WriteString("序号:")
+				buff2.WriteString(strconv.FormatInt(int64(k),10))
+				buff2.WriteString("第")
+				buff2.WriteString(strconv.FormatInt(v.blockH,10))
+				buff2.WriteString("个,")
+				buff2.WriteString("块高:")
+				buff2.WriteString(strconv.FormatInt(v.targetH,10))
+				buff2.WriteString("\n")
+			}
+			log.Println(buff2.String())
 		}
 	}
 }
