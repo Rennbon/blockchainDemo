@@ -129,7 +129,7 @@ func (*BtcService) GetBalanceInAddress(address string) (balance coins.CoinAmount
 //addrForm来源地址，addrTo去向地址
 //transfer 转账金额
 //fee 小费
-func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter) (txId string, err error) {
+func (b *BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter) (txId string, err error) {
 	//参数拦截,进入btcDaemon处理，会后台自动调用sendAddressToAddress方法
 	/*ch := make(chan<- *TxResult)
 	wg := new(sync.WaitGroup)
@@ -139,10 +139,11 @@ func (*BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee c
 	}()
 
 	wg.Wait()*/
-	return
+	return b.sendAddressToAddress(addrFrom, addrTo, transfer, fee)
 }
+
 //真正的转账
-func (b *BtcService)sendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter) (txId string, err error) {
+func (b *BtcService) sendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter) (txId string, err error) {
 	//数据库获取prv pub key等信息，便于调试--------START------
 	actf, err := dhSrv.GetAccountByAddress(addrFrom)
 	if err != nil {

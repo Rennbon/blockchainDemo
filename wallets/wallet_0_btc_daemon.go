@@ -164,7 +164,7 @@ func (d *btcDaemon)Run(){
 
 
 
-//btc后端运行机制，单例跑
+// ok btc后端运行机制，单例跑
 func NewBTCDaemon(tick *time.Ticker )(daemon *btcDaemon){
 	var err error
 	d := &btcDaemon{}
@@ -205,8 +205,7 @@ func NewBTCDaemon(tick *time.Ticker )(daemon *btcDaemon){
 }
 
 
-//（被动方法，触发器触发,需要间隔时间段触发）
-//
+//ok（被动方法，触发器触发,需要间隔时间段触发）
 //填充需要当前时间检测的tx的公链状态
 func (d *btcDaemon)fillConfmQ() {
 	d.hpl.m.Lock()
@@ -277,6 +276,7 @@ func (d *btcDaemon)listenMainNet() {
 }
 //（被动方法,一次触发，跑到死）
 //启动一次，跑个没完
+// 消费队列数据执行交易=>填充块高=>扔到历史池
 //todo 消费处理池，执行TX,需要轮询
 func (d *btcDaemon)consumeeExcuCH() {
 	for ch := range d.exch  {
@@ -347,7 +347,7 @@ func (d *btcDaemon)restart() {
 	}
 }
 
-//(主动方法，交易发起的时候调用)
+//ok(主动方法，交易发起的时候调用)
 //往local池写数据
 //若local池已满，则写到global池
 //local池的直接写到history池执行tx交易并监听

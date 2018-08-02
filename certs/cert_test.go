@@ -28,7 +28,7 @@ var (
 )
 
 func TestGenerateSimpleKey(t *testing.T) {
-	handler.LoadService(xlm)
+	handler.LoadService(btc)
 	key, err := handler.GenerateSimpleKey()
 	if err != nil {
 		fmt.Println(err)

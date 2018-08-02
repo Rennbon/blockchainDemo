@@ -38,9 +38,8 @@ func TestGetTxByAddress(t *testing.T) {
 }
 
 func TestGetRawTransaction(t *testing.T) {
-	getRawTransaction("e3f0129da50920c2a01492eecc9c13acbefd9b8a9a46af72626141f23c774030")
+	getRawTransaction("f1951a8a7f5028a58cef7dace3ec64b1a6ab5f0711bff6baf2d7cd7ee64d9424")
 }
 func TestGetBlockInfo(t *testing.T) {
 	getBlockInfo("53dc56749eac5f46820fcdee93e0c1e4242b07a129b4635cc6e4e57c4d69ba76")
 }
-

@@ -76,7 +76,7 @@ func TestGetBalanceInAddress(t *testing.T) {
 	)
 	switch handler.TypeName {
 	case btcStrName:
-		balance, err = handler.GetBalanceInAddress("n3ZT36odeAbur87bTdR6JGCtnWaquGgFZ2")
+		balance, err = handler.GetBalanceInAddress("mhAfGecTPa9eZaaNkGJcV7fmUPFi3T2Ki8")
 		break
 	case xlmStrName:
 		balance, err = handler.GetBalanceInAddress("GD43TZONCLLNDHA5ALVRWZKMATTOKNLLTH3XTAJN6SQK77Q3ZT44QJJV")
@@ -95,17 +95,17 @@ func TestSendAddressToAddress(t *testing.T) {
 		txId          string
 		err           error
 		transfer, fee coins.CoinAmounter
-		ch  <-          chan *wallets.TxResult
+		//ch  <-          chan *wallets.TxResult
 	)
-	ch = make(chan *wallets.TxResult)
+	//ch = make(chan *wallets.TxResult)
 	switch handler.TypeName {
 	case btcStrName:
-		transfer, _ = btcCoin.StringToCoinAmout("1")
+		transfer, _ = btcCoin.StringToCoinAmout("2013")
 		fee, _ = btcCoin.StringToCoinAmout("0.0001")
-		txId, err = handler.SendAddressToAddress("mhAfGecTPa9eZaaNkGJcV7fmUPFi3T2Ki8", "n3ZT36odeAbur87bTdR6JGCtnWaquGgFZ2", transfer, fee)
-		for c := range ch {
+		txId, err = handler.SendAddressToAddress("mhAfGecTPa9eZaaNkGJcV7fmUPFi3T2Ki8", "mvERz7ku76vZ4s5j4Ao4XCNVDPEPmVG4sF", transfer, fee)
+		/*for c := range ch {
 			t.Log(c)
-		}
+		}*/
 		break
 	case xlmStrName:
 		transfer, _ = xlmCoin.StringToCoinAmout("10")
