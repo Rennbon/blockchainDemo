@@ -32,9 +32,9 @@ type Walleter interface {
 	CheckAddressExists(string) error
 }
 
-type AddrTransfer struct {
-	AddrTo   string
-	Transfer coins.CoinAmounter
+type AddrAmount struct {
+	Address string
+	Amount  coins.CoinAmounter
 }
 type TxResult struct {
 	TxId     string

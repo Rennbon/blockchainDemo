@@ -144,7 +144,7 @@ func (b *BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee
 }
 
 //真正的转账
-func (b *BtcService) sendAddressToAddress(addrFrom string, addrTos []*AddrTransfer, transfer, fee coins.CoinAmounter) (txId string, err error) {
+func (b *BtcService) sendAddressToAddress(addrFrom string, addrTos []*AddrAmount, transfer, fee coins.CoinAmounter) (txId string, err error) {
 	//数据库获取prv pub key等信息，便于调试--------START------
 	actf, err := dhSrv.GetAccountByAddress(addrFrom)
 	if err != nil {
@@ -161,7 +161,7 @@ func (b *BtcService) sendAddressToAddress(addrFrom string, addrTos []*AddrTransf
 	feesum := fee                              //交易费总和
 	totalTran, _ := btcCoin.StringToCoinAmout("0")
 	for _, v := range addrTos {
-		totalTran.Add(v.Transfer) //总共花费
+		totalTran.Add(v.Amount) //总共花费
 	}
 	totalTran.Add(feesum) //总共花费
 	//totalTran := transfer + feesum      //总共花费
@@ -245,7 +245,7 @@ func (b *BtcService) sendAddressToAddress(addrFrom string, addrTos []*AddrTransf
 	addrsave := make([]string, 0, len(addrTos)+1)
 	addrsave = append(addrsave, addrFrom)
 	for _, v := range addrTos {
-		addrt, err := btcutil.DecodeAddress(v.AddrTo, btcEnv)
+		addrt, err := btcutil.DecodeAddress(v.Address, btcEnv)
 		if err != nil {
 			return
 		}
@@ -255,8 +255,8 @@ func (b *BtcService) sendAddressToAddress(addrFrom string, addrTos []*AddrTransf
 		}
 		/*bat := int64(transfer * 1e8)
 		tx.AddTxOut(wire.NewTxOut(bat, pkScriptt))*/
-		tx.AddTxOut(wire.NewTxOut(v.Transfer.Val().Int64(), pkScriptt))
-		addrsave = append(addrsave, v.AddrTo)
+		tx.AddTxOut(wire.NewTxOut(v.Amount.Val().Int64(), pkScriptt))
+		addrsave = append(addrsave, v.Address)
 	}
 
 	//-------------------输出填充end------------------------------

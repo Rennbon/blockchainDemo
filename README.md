@@ -25,4 +25,4 @@ db.createCollection("tx")
 - utils 工具
 - wallets 钱包相关
 ### daemon 流程图
-![daemon 流程图](https://github.com/Rennbon/blockchainDemo/raw/master/daemon/tx_daemon_flow_chart.png)
+![daemon 流程图](https://github.com/Rennbon/blockchainDemo/raw/master/daemon/tx_daemon_flow_chart.jpg)
