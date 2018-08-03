@@ -139,11 +139,12 @@ func (b *BtcService) SendAddressToAddress(addrFrom, addrTo string, transfer, fee
 	}()
 
 	wg.Wait()*/
-	return b.sendAddressToAddress(addrFrom, addrTo, transfer, fee)
+	//return b.sendAddressToAddress(addrFrom, addrTo, transfer, fee)
+	return
 }
 
 //真正的转账
-func (b *BtcService) sendAddressToAddress(addrFrom, addrTo string, transfer, fee coins.CoinAmounter) (txId string, err error) {
+func (b *BtcService) sendAddressToAddress(addrFrom string, addrTos []*AddrTransfer, transfer, fee coins.CoinAmounter) (txId string, err error) {
 	//数据库获取prv pub key等信息，便于调试--------START------
 	actf, err := dhSrv.GetAccountByAddress(addrFrom)
 	if err != nil {
@@ -159,7 +160,10 @@ func (b *BtcService) sendAddressToAddress(addrFrom, addrTo string, transfer, fee
 	outsu, _ := btcCoin.StringToCoinAmout("0") //unspent单子相加
 	feesum := fee                              //交易费总和
 	totalTran, _ := btcCoin.StringToCoinAmout("0")
-	totalTran.Add(transfer, feesum) //总共花费
+	for _, v := range addrTos {
+		totalTran.Add(v.Transfer) //总共花费
+	}
+	totalTran.Add(feesum) //总共花费
 	//totalTran := transfer + feesum      //总共花费
 	var pkscripts [][]byte              //txin签名用script
 	tx := wire.NewMsgTx(wire.TxVersion) //构造tx
@@ -238,18 +242,23 @@ func (b *BtcService) sendAddressToAddress(addrFrom, addrTo string, transfer, fee
 	outsu.Sub(totalTran)
 	tx.AddTxOut(wire.NewTxOut(outsu.Val().Int64(), pkScriptf))
 	//输出2，给to------------------付钱-----------------
-	addrt, err := btcutil.DecodeAddress(addrTo, btcEnv)
+	addrsave := make([]string, 0, len(addrTos)+1)
+	addrsave = append(addrsave, addrFrom)
+	for _, v := range addrTos {
+		addrt, err := btcutil.DecodeAddress(v.AddrTo, btcEnv)
+		if err != nil {
+			return
+		}
+		pkScriptt, err := txscript.PayToAddrScript(addrt)
+		if err != nil {
+			return
+		}
+		/*bat := int64(transfer * 1e8)
+		tx.AddTxOut(wire.NewTxOut(bat, pkScriptt))*/
+		tx.AddTxOut(wire.NewTxOut(v.Transfer.Val().Int64(), pkScriptt))
+		addrsave = append(addrsave, v.AddrTo)
+	}
 
-	if err != nil {
-		return
-	}
-	pkScriptt, err := txscript.PayToAddrScript(addrt)
-	if err != nil {
-		return
-	}
-	/*bat := int64(transfer * 1e8)
-	tx.AddTxOut(wire.NewTxOut(bat, pkScriptt))*/
-	tx.AddTxOut(wire.NewTxOut(transfer.Val().Int64(), pkScriptt))
 	//-------------------输出填充end------------------------------
 	err = sign(tx, actf.PrvKey, pkscripts) //签名
 	if err != nil {
@@ -262,7 +271,7 @@ func (b *BtcService) sendAddressToAddress(addrFrom, addrTo string, transfer, fee
 	}
 	//这里最好也记一下当前的block count,以便监听block count比此时高度
 	//大6的时候去获取当前TX是否在公链有效
-	dhSrv.AddTx(txHash.String(), addrFrom, []string{addrFrom, addrTo})
+	dhSrv.AddTx(txHash.String(), addrFrom, addrsave)
 
 	return txHash.String(), nil
 }
