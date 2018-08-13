@@ -277,7 +277,7 @@ func (d *btcDaemon) listenMainNet() {
 // 消费队列数据执行交易=>填充块高=>扔到历史池
 //todo 消费处理池，执行TX,需要轮询
 func (d *btcDaemon) consumeeExcuCH() {
-	for ch := range d.exch {
+	/*	for ch := range d.exch {
 		//todo 执行tx并广播到共链，(需要分离SendAddressToAddress)
 		//todo 广播成功后推入历史池监听
 		btcSer := &BtcService{}
@@ -303,7 +303,7 @@ func (d *btcDaemon) consumeeExcuCH() {
 			}
 			d.hpl.m.Unlock()
 		}
-	}
+	}*/
 }
 
 //（被动方法，触发器触发,需要间隔时间段触发）

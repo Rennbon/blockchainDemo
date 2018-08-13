@@ -11,3 +11,5 @@ mongo:
   database: "blockChain"
 xlmconf:
   env: 3
+ethconf:
+  host: "ws://127.0.0.1:8485"

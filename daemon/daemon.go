@@ -1,3 +1,8 @@
+/*这里是单账户模式
+todo:依赖注入的方式实现daemon层动态适配不同的币种，主流程只维护一套
+
+*/
+
 package daemon
 
 import (
@@ -9,7 +14,6 @@ import (
 )
 
 type simpleTx struct {
-	addrF      string                //提币地址
 	addrTs     []*wallets.AddrAmount //充币地址
 	createTime time.Time             //创建时间
 	deadline   time.Time             //执行期限，晚于此线执行失败逻辑
@@ -30,7 +34,6 @@ const (
 
 type localPool struct {
 	m         *sync.Mutex        //抢占用锁，确保原子性
-	balance   coins.CoinAmounter //账户余额
 	txs       []*simpleTx        //交易单s
 	size      int                //txs的数量
 	txsAmount coins.CoinAmounter //txs聚合总额
@@ -47,6 +50,8 @@ type globalPool struct {
 }
 
 type daemon struct {
+	address string //账户地址
+	balance   coins.CoinAmounter //账户余额
 	ispkg    bool         //是否支持打包处理tx
 	tick     *time.Ticker //周期计时器
 	blkHt    int64        //区块块高
@@ -58,14 +63,37 @@ type daemon struct {
 }
 
 func newDaemon(dd distributionDaemoner) daemoner {
+	var err error
 	d := &daemon{
 		ispkg: dd.isPkg(),
 		tick:  dd.blockTick(),
 	}
-	return d
-}
-func (l *localPool) newLocalPool() {
+	d.blkHt, err = dd.getBlockHeight()
+	d.address = "" //这里应该是本地数据库读去address配置
+	d.balance,err = dd.getBalance(d.address)//账户余额
+	if err != nil {
+		panic(err)
+	}
+	dd.
+    d.l = &localPool{
+    	m:new(sync.Mutex),
+		txs:[]*simpleTx{},
+		size:0,
+		txsAmount:
+	}
 
+	if err!=nil{
+		panic(err)
+	}
+
+	txs       []*simpleTx        //交易单s
+	size      int                //txs的数量
+	txsAmount coins.CoinAmounter //txs聚合总额
+	inlock    bool               //填充锁，决定txs是否可以append新tx
+	outlock   bool               //消费锁，决定txs是否可以执行消费流程
+	inlockch  chan lockType      //inlock锁通道
+	outlockch chan lockType      //outlock锁通道
+	return d
 }
 
 func (d *daemon) run() {
@@ -86,13 +114,18 @@ type daemoner interface {
 	//消费交易
 	consumeExcutx() error
 }
+
+//以下方法需要动态注入到daemon里面
 type distributionDaemoner interface {
 	isPkg() bool
 	//获取总块高
 	getBlockHeight() (height int64, err error)
 	//获取tx成功状态的区块确认数，秒过的返回1
-	getSuccessfulConfirmedNum() int64
+	getSuccessfulConfirmedNum()(minBlock int64)
 	//验证txId对应的tx的确认状态
-	checkConfirm(txId string) (int64, error)
+	checkConfirm(txId string) (confimNum int64,err error)
+	//获取账户余额
+	getBalance(address string )(balance coins.CoinAmounter, err error)
+	//区块同步时间
 	blockTick() (tick *time.Ticker)
 }

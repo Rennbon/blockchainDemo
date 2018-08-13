@@ -245,12 +245,14 @@ func (b *BtcService) sendAddressToAddress(addrFrom string, addrTos []*AddrAmount
 	addrsave := make([]string, 0, len(addrTos)+1)
 	addrsave = append(addrsave, addrFrom)
 	for _, v := range addrTos {
-		addrt, err := btcutil.DecodeAddress(v.Address, btcEnv)
-		if err != nil {
+		addrt, errInner := btcutil.DecodeAddress(v.Address, btcEnv)
+		if errInner != nil {
+			err = errInner
 			return
 		}
-		pkScriptt, err := txscript.PayToAddrScript(addrt)
-		if err != nil {
+		pkScriptt, errInner := txscript.PayToAddrScript(addrt)
+		if errInner != nil {
+			err = errInner
 			return
 		}
 		/*bat := int64(transfer * 1e8)

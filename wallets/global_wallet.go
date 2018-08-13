@@ -3,6 +3,7 @@ package wallets
 import (
 	"github.com/Rennbon/blockchainDemo/coins"
 	"github.com/Rennbon/blockchainDemo/database"
+	"time"
 )
 
 type AcountRunMode int8
@@ -30,6 +31,19 @@ type Walleter interface {
 	CheckTxMergerStatus(txId string) error
 	//检测地址是否有效（在公链中存在）
 	CheckAddressExists(string) error
+}
+
+type aa interface {
+	//获取总块高
+	GetBlockHeight() (height int64, err error)
+	//获取tx成功状态的区块确认数，秒过的返回1
+	GetSuccessfulConfirmedNum() (minBlock int64)
+	//验证txId对应的tx的确认状态
+	CheckConfirm(txId string) (confimNum int64, err error)
+	//获取账户余额
+	GetBalance(address string) (balance coins.CoinAmounter, err error)
+	//区块同步时间
+	BlockTick() (tick *time.Ticker)
 }
 
 type AddrAmount struct {

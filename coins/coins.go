@@ -63,6 +63,7 @@ const (
 	CoinMilli    CoinUnit = -3
 	CoinMicro    CoinUnit = -6
 	CoinBox      CoinUnit = -8
+	CoinXob      CoinUnit = -18
 )
 
 //币种计算金额

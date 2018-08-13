@@ -24,11 +24,12 @@ func (ch *CertHandler) LoadService(g certs.Generater) error {
 var (
 	btc     *certs.BtcCertService
 	xlm     *certs.XlmCertService
+	eth     *certs.EthCertService
 	handler CertHandler
 )
 
 func TestGenerateSimpleKey(t *testing.T) {
-	handler.LoadService(btc)
+	handler.LoadService(eth)
 	key, err := handler.GenerateSimpleKey()
 	if err != nil {
 		fmt.Println(err)
