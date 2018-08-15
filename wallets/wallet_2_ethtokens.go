@@ -3,12 +3,14 @@ package wallets
 import (
 	"context"
 	"fmt"
+	"github.com/Rennbon/blockchainDemo/wallets/token"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"io/ioutil"
+	"log"
 	"math/big"
 )
 
@@ -110,24 +112,51 @@ func (c *EthTokensService) Transfer() {
 	if txerr != nil {
 		panic(txerr)
 	}
-	/*	//用私钥签署交易签名
-		signature, signatureErr := crypto.Sign(tx.Hash().Bytes(), keyWrapper.PrivateKey)
-		if signatureErr != nil {
-			fmt.Println("signature create error:")
-			panic(signatureErr)
-		}
+}
 
-		signedTx, signErr := tx.WithSignature(signer, signature)
-		if signErr != nil {
-			fmt.Println("signer with signature error:")
-			panic(signErr)
-		}
+func GetAccount(contract string, wallet string) {
+	address := common.HexToAddress(wallet)
 
-		//发送交易到网络
-		txErr := tokenClient.SendTransaction(context.TODO(), signedTx)
+	token, err := token.NewTokenCaller(common.HexToAddress(contract), tokenClient)
+	if err != nil {
+		log.Printf("Failed to instantiate a Token contract: %v\n", err)
+		panic(err)
+	}
 
-		if txErr != nil {
-			fmt.Println("send tx error:")
-			panic(txErr)
-		}*/
+	block, err := tokenClient.BlockByNumber(context.TODO(), nil)
+	if err != nil {
+		log.Printf("Failed to get current block number: %v\n", err)
+		panic(err)
+	}
+
+	decimals, err := token.Decimals(nil)
+	if err != nil {
+		log.Printf("Failed to get decimals from contract: %v \n", contract)
+		panic(err)
+	}
+
+	ethBalance, err := tokenClient.BalanceAt(context.TODO(), address, nil)
+	if err != nil {
+		log.Printf("Failed to get ethereum balance from address: %v \n", address)
+	}
+
+	balance, err := token.BalanceOf(nil, address)
+	if err != nil {
+		log.Printf("Failed to get balance from contract: %v %v\n", contract, err)
+	}
+
+	symbol, err := token.Symbol(nil)
+	if err != nil {
+		log.Printf("Failed to get symbol from contract: %v \n", contract)
+
+	}
+
+	name, err := token.Name(nil)
+	if err != nil {
+		log.Printf("Failed to retrieve token name from contract: %v | %v\n", contract, err)
+
+	}
+
+	log.Println(block, decimals, ethBalance, balance, symbol, name)
+	return
 }
