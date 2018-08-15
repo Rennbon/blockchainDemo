@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/Rennbon/blockchainDemo/wallets/token"
+
 	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -159,4 +161,53 @@ func GetAccount(contract string, wallet string) {
 
 	log.Println(block, decimals, ethBalance, balance, symbol, name)
 	return
+}
+
+func Erc20Transfer() {
+
+	//首先导入上面生成的账户密钥（json）和密码
+	KEYJSON_FILEDIR := `/Users/rennbon/geth/mychain/keystore/UTC--2018-08-15T02-11-45.184398213Z--2a41401f94dc5b97bcb72bf07bf839c74753554b`
+	// 打开账户私钥文件
+	keyJson, readErr := ioutil.ReadFile(KEYJSON_FILEDIR)
+	if readErr != nil {
+		fmt.Println("key json read error:")
+		panic(readErr)
+	}
+
+	// 解析私钥文件
+	keyWrapper, keyErr := keystore.DecryptKey(keyJson, "qwe123456")
+	if keyErr != nil {
+		fmt.Println("key decrypt error:")
+		panic(keyErr)
+	}
+	auth := bind.NewKeyedTransactor(keyWrapper.PrivateKey)
+
+	from := common.HexToAddress("0x2A41401f94Dc5b97BCB72bF07BF839C74753554b")
+	to := common.HexToAddress("0xAf67c0bC065D8D22cFDc2d8971062Ff8c10e3154")
+	contract := common.HexToAddress("0x0d13E6594AF3E9E91d1CeBfcA3F344f7F59b4a74")
+	//来源地址
+	tkn, err := token.NewToken(contract, tokenClient)
+	if err != nil {
+		panic(err)
+	}
+	balance, err := tkn.BalanceOf(nil, from)
+	if err != nil {
+		panic(err)
+	}
+	log.Println(balance)
+	//每个代币都会有相应的位数，例如eos是18位，那么我们转账的时候，需要在金额后面加18个0
+	decimal, err := tkn.Decimals(nil)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(decimal)
+
+	// TO ADDRESS
+	tx, err := tkn.Transfer(auth, to, big.NewInt(1e8))
+	if nil != err {
+		fmt.Printf("err: %v \n", err)
+		return
+	}
+	log.Println(tx.Hash().String())
+
 }
