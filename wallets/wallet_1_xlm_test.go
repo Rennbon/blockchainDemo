@@ -26,3 +26,7 @@ func TestSequenceForAccount(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestXlmService_Other(t *testing.T) {
+	xlm.Other()
+}

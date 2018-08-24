@@ -204,6 +204,7 @@ func Erc20Transfer() {
 
 	// TO ADDRESS
 	tx, err := tkn.Transfer(auth, to, big.NewInt(1e8))
+
 	if nil != err {
 		fmt.Printf("err: %v \n", err)
 		return

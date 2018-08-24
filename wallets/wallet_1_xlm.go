@@ -9,11 +9,13 @@ import (
 	"github.com/Rennbon/blockchainDemo/errors"
 	"time"
 
+	"bytes"
 	"github.com/Rennbon/blockchainDemo/coins"
 	"github.com/Rennbon/blockchainDemo/config"
 	"github.com/stellar/go/build"
 	"github.com/stellar/go/clients/horizon"
 	"log"
+	"strconv"
 )
 
 ////////////////////基础设施//////////////////////////
@@ -366,10 +368,25 @@ func (c *XlmService) sequenceForAccount(account string) error {
 /////////////////////////////////////////////////////just for test///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 func (*XlmService) Other() {
-	homeDomain, err := client.HomeDomainForAccount("GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX")
+	/*homeDomain, err := client.HomeDomainForAccount("GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX")
 	fmt.Println(homeDomain, err)
 	offerset, err := client.LoadAccountOffers("GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX")
 	fmt.Println(offerset, err)
-	client.LoadOperation("")
+	client.LoadOperation("")*/
+
+	num, _ := client.SequenceForAccount("GBZKTZBJIMLFPUGZUNCUTJCUUREEG4W4UF74K5DRJRZISQNYQP3QOUYX")
+	num2 := int64(num) - 500000000
+
+	buff := &bytes.Buffer{}
+	buff.WriteString("?cursor=")
+	buff.WriteString(strconv.FormatInt(num2, 10))
+	buff.WriteString("&limit=20")
+	buff.WriteString("&order=asc")
+
+	cursor := horizon.Cursor(buff.String())
+	tx := horizon.Transaction{}
+	client.StreamTransactions(context.TODO(), "GD43TZONCLLNDHA5ALVRWZKMATTOKNLLTH3XTAJN6SQK77Q3ZT44QJJV", &cursor, func(transaction horizon.Transaction) {
+		tx = transaction
+	})
 
 }

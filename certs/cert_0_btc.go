@@ -1,11 +1,11 @@
 package certs
 
 import (
-	"encoding/hex"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil"
+	"encoding/hex"
 )
 
 type BtcCertService struct {
@@ -36,9 +36,13 @@ func (*BtcCertService) GetNewAddress(pubKey string) (address string, err error) 
 	if err != nil {
 		return
 	}
+
+
 	addrspub, err := btcutil.NewAddressPubKey(pubKeyByte, &chaincfg.RegressionNetParams)
 	if err != nil {
 		return
 	}
 	return addrspub.EncodeAddress(), nil
+
+	return
 }

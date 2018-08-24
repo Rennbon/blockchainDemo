@@ -34,7 +34,7 @@ func TestGenerateSimpleKey(t *testing.T) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	t.Log(key)
+	t.Log(key.PrivKey,key.Address,key.PubKey)
 	//fmt.Printf("privatekey:%s\n\rpublickey:%s", key.PrivKey, key.PubKey)
 }
 func TestNewAddress(t *testing.T) {
@@ -58,8 +58,12 @@ func TestNewAddress(t *testing.T) {
 		input = "SCK3NIJ5XLQS3E7OP3TVFYBYXXXIHA2ILKCW6PDYFHMABRPFUIV2HAE4"
 		output = "GC7JBI22JROCC5T5ROWT4RDB4C4IHNZPUSQVIAPICJHGSMXWDW5TVKDF"
 	}
-	addr, _ := handler.GetNewAddress(input)
-	fmt.Println(addr)
+	addr, err:= handler.GetNewAddress(input)
+	if err!=nil{
+		t.Fail()
+		t.Error(err)
+	}
+	t.Log(addr)
 	if output != addr {
 		t.Error("失败")
 	}

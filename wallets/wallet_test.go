@@ -141,7 +141,7 @@ func TestCheckTxMergerStatus(t *testing.T) {
 
 //测试账号是否存在
 func TestCheckAddressExists(t *testing.T) {
-	handler.LoadService(btc)
+	handler.LoadService(xlm)
 	var (
 		err error
 	)
