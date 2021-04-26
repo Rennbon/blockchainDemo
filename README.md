@@ -1,5 +1,5 @@
 ### 该库是学习库，完整开源库请转至boxwallet库
-的[boxwallet库](https://github.com/Rennbon/boxwallet)
+[boxwallet库](https://github.com/Rennbon/boxwallet)
 
 
 ### 如果mongodb不太了解的话，可以直接docker安装	
