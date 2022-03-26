@@ -1,4 +1,4 @@
-### 该库是学习库，完整开源库请转至boxwallet库 [白嫖也要给Star]
+### 该库是学习库，完整开源库请转至boxwallet库 [请勿白嫖，Star支持]
 [boxwallet库](https://github.com/Rennbon/boxwallet)
 
 
