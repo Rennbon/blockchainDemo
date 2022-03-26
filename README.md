@@ -1,4 +1,4 @@
-### 该库是学习库，完整开源库请转至boxwallet库 [请勿白嫖，Star支持]
+### 该库是学习库，完整开源库请转至boxwallet库 [一闪一闪亮晶晶，star一下好心情]
 [boxwallet库](https://github.com/Rennbon/boxwallet)
 
 
