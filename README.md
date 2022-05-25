@@ -29,3 +29,9 @@ db.createCollection("tx")
 - wallets 钱包相关
 
 - etc
+
+## 维护及联系
+- 微信号：`WB343688972` 或者 扫码，请标注`ETH`
+- 欢迎 star 加我交流，会拉群
+   
+   <img src="https://github.com/Rennbon/pyhikvision/blob/master/doc/wechat.png" width="200px" >
